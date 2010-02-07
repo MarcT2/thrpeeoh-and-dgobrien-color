@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="100%" height="100%" borderStyle="solid">
+	<mx:Script>
+		<![CDATA[
+			import mx.core.Container;
+			import mx.events.FlexEvent;
+			import mx.events.IndexChangedEvent;
+			import mx.collections.ArrayCollection;
+			import scripts.jobQueue.QueueJobs;
+			
+			private var queueJobs:QueueJobs;
+			private var city:CityState;
+			private var script:Script;
+			private var timer:Timer;
+			
+			[Bindable] private var infoData:ArrayCollection = new ArrayCollection;
+			[Bindable] private var resourceData:ArrayCollection = new ArrayCollection;
+			[Bindable] private var buildingData:ArrayCollection = new ArrayCollection;
+			[Bindable] private var researchData:ArrayCollection = new ArrayCollection;
+			[Bindable] private var heroData:ArrayCollection = new ArrayCollection;
+			[Bindable] private var armyData:ArrayCollection = new ArrayCollection;
+			[Bindable] private var extraTroopData:ArrayCollection = new ArrayCollection;
+			[Bindable] private var troopsData:ArrayCollection = new ArrayCollection;
+			[Bindable] private var fortificationsData:ArrayCollection = new ArrayCollection;
+			[Bindable] private var tradesData:ArrayCollection = new ArrayCollection;
+			
+			public function init(queueJobs:QueueJobs, city:CityState) : void {
+	        	this.queueJobs = queueJobs;
+				this.city = city;
+	        	this.script = new Script(city);
+	        	timer = new Timer(10000);
+	        	timer.addEventListener(TimerEvent.TIMER, updateAllInfo);
+	        	timer.start();
+	        	
+				this.id = "Castle" + city.castle.id;
+	        	var sName:String = city.castle.name;
+	        	if (sName.length > 3) sName = sName.substring(0, 3);
+	        	this.label = sName + "(" + Map.getX(city.castle.fieldId) + "," + Map.getY(city.castle.fieldId) + ")";
+
+	        	script.addEventListener(ScriptLogEvent.TYPE, queueJobs.onLog);
+	        	city.cityManager.addEventListener(ScriptLogEvent.TYPE, queueJobs.onLog);
+	        	script.addEventListener(Script.STOP, handleEndScript);
+	        	if (city.castle == city.player.castlesArray[0]) EvonyConnectionSingleton.getInstance().getConnection().addEventListener(ScriptLogEvent.TYPE, queueJobs.onLog);
+	        	
+	        	addEventListener(FlexEvent.SHOW, updateAllInfo);
+	        	callLater(function():void {
+					for each(var c:Container in allinfo.getChildren()) {
+	        			c.addEventListener(FlexEvent.SHOW, updateAllInfo);
+	        		}
+	        	
+					initTextAreas();
+					updateAllInfo();   				    
+				});
+			}
+			
+			public function getCity() : CityState { return city; }
+			public function cleanup() : void { timer.stop(); }
+	        
+	        private function updateAllInfo(obj:Object = null) : void {
+	        	if (obj != null && !visible) return;
+	        	
+	        	if (obj == null || allinfo.selectedChild == info) {
+	        		city.cityManager.updateInfoData(infoData);
+	        	}
+	        	if (obj == null || allinfo.selectedChild == resource) {
+	        		city.cityManager.updateResourceData(resourceData);
+	        	}
+	        	if (obj == null || allinfo.selectedChild == heroes) {
+	        		city.cityManager.updateHeroData(heroData);
+	        	}
+	        	if (obj == null || allinfo.selectedChild == buildings) {
+	        		city.cityManager.updateBuildingData(buildingData);
+	        	}
+	        	if (obj == null || allinfo.selectedChild == research) {
+	        		city.cityManager.updateResearchData(researchData);
+	        	}
+	        	if (obj == null || allinfo.selectedChild == armies) {
+	        		city.cityManager.updateArmyData(armyData);
+	        	}
+	        	if (obj == null || allinfo.selectedChild == troops) {
+	        		city.cityManager.updateTroopData(troopsData);
+	        	}
+	        	if (obj == null || allinfo.selectedChild == fortifications) {
+	        		city.cityManager.updateFortificationsData(fortificationsData);
+	        	}
+	        	if (obj == null || allinfo.selectedChild == trade) {
+	        		city.cityManager.updateTradesData(tradesData);
+	        	}
+	        	if (obj == null || allinfo.selectedChild == extra) {
+	        		city.cityManager.updateExtraTroopData(extraTroopData);
+	        	}
+	        }
+			
+			private function initTextAreas(obj:Object = null) : void {
+				initScriptTextArea();
+				initGoalsTextArea();
+			}
+			
+			private function initScriptTextArea(obj:Object = null) : void {
+				if (scriptTextArea == null) {
+					callLater(initScriptTextArea);
+				} else {
+					var scriptCache:SharedObject = SharedObject.getLocal("citytab"+city.castle.id);				
+					scriptTextArea.text = scriptCache.data.now;
+				}
+			}
+			
+			private function initGoalsTextArea(obj:Object = null) : void {
+				if (goalsTextArea == null) {
+					callLater(initGoalsTextArea);
+				} else {
+					var goalsCache:SharedObject = SharedObject.getLocal("citygoals"+city.castle.id);				
+					goalsTextArea.text = goalsCache.data.now;
+				}
+			}
+			
+			private function logMessage(str:String) : void {
+				queueJobs.logMessage(str);
+			}
+			private function runScript() : void {
+				try {
+    				runButton.enabled = false;
+    				stopButton.enabled=true;
+    				script.SetScriptCommands = scriptTextArea.text;					        	
+	        		script.start();
+	   			}
+	   			catch (ae:ArgumentError) {
+          			logMessage(ae.message);
+	        		runButton.enabled = true;
+	        		stopButton.enabled = false;
+	   			}
+	   			catch(e:Error) {
+	        		logMessage(e.message);
+	        		runButton.enabled = true;
+	        		stopButton.enabled = false;
+	        	}
+			}
+			private function stopScript() : void {
+        		queueJobs.logMessage("Stopped"); 
+        		script.stop();
+        		runButton.enabled = true;
+        		stopButton.enabled = false;				
+			}
+			private function handleEndScript(obj:Object) : void {
+        		runButton.enabled = true;
+        		stopButton.enabled = false;				
+			}			
+			private function saveScript() : void {
+				var soCityCommand:SharedObject ;
+				soCityCommand = SharedObject.getLocal("citytab"+city.castle.id);
+    			soCityCommand.data.now = scriptTextArea.text;				
+    			var status:String = soCityCommand.flush();
+    			if (status != "flushed") {
+    				queueJobs.logMessage("SAVING PROBLEM: " + status + ", you may need to increase flash local storage"); 
+    			}
+			}					
+
+			private function saveGoals() : void {
+				var soCityCommand:SharedObject ;
+				soCityCommand = SharedObject.getLocal("citygoals"+city.castle.id);
+    			soCityCommand.data.now = goalsTextArea.text;
+    			var status:String = soCityCommand.flush();
+    			if (status != "flushed") {
+    				queueJobs.logMessage("SAVING PROBLEM: " + status + ", you may need to increase flash local storage"); 
+    			}
+			}
+			
+			private function setGoals() : void {
+				city.cityManager.setGoals(goalsTextArea.text);
+			}			
+		]]>
+	</mx:Script>
+
+
+	<mx:HDividedBox x="0" y="0" width="100%" height="100%">
+		<mx:VBox width="100%" height="100%" verticalGap="0">
+			<mx:HBox width="100%" height="30" verticalAlign="bottom">
+				<mx:TabBar dataProvider="alltasks">
+				</mx:TabBar>
+			</mx:HBox>
+			<mx:ViewStack id="alltasks" width="100%" height="100%" borderStyle="solid">
+				<mx:Canvas label="Goals" width="100%" height="100%" id="goalsCanvas">
+					<mx:VBox width="100%" height="100%" verticalGap="0">
+						<mx:TextArea id="goalsTextArea" width="100%" height="100%" backgroundColor="#F6FBFA"/>
+						<mx:HBox width="100%" height="30" verticalAlign="middle" horizontalAlign="right">
+							<mx:Button label="Set Goals" click="setGoals()"/>
+							<mx:Button label="Save" click="saveGoals()"/>
+						</mx:HBox>
+					</mx:VBox>
+				</mx:Canvas>
+				<mx:Canvas label="Script" width="100%" height="100%" id="scriptCanvas">
+					<mx:VBox width="100%" height="100%">
+						<mx:TextArea width="100%" height="100%" id="scriptTextArea"/>
+						<mx:HBox width="100%" height="30" verticalAlign="middle" horizontalAlign="right">
+							<mx:Button label="Run" id="runButton" click="runScript()"/>
+							<mx:Button label="Stop" enabled="false" id="stopButton" click="stopScript()"/>
+							<mx:Button label="Save" id="saveButton" click="saveScript()"/>
+						</mx:HBox>
+					</mx:VBox>
+				</mx:Canvas>
+			</mx:ViewStack>
+		</mx:VBox>
+		<mx:VBox width="400" height="100%" verticalGap="0">
+			<mx:HBox width="100%" height="20">
+				<mx:TabBar dataProvider="allinfo">
+				</mx:TabBar>
+			</mx:HBox>
+			<mx:ViewStack id="allinfo" width="100%" height="100%">
+				<mx:Canvas label="I" width="100%" height="100%" id="info">
+					<mx:DataGrid dataProvider="{infoData}" width="100%" height="100%" allowMultipleSelection="false"
+						doubleClickEnabled="false" dragEnabled="false" editable="false" resizableColumns="true" wordWrap="false" 
+						showHeaders="false" sortableColumns="false" visible="true" allowDragSelection="false" draggableColumns="false" enabled="true" 
+						selectable="false" horizontalScrollPolicy="off" variableRowHeight="true" minHeight="30" rowHeight="16">
+						<mx:columns>
+							<mx:DataGridColumn headerText="" dataField="col1" width="0.25"/>
+							<mx:DataGridColumn headerText="" dataField="col2" width="0.35" showDataTips="true"/>
+						</mx:columns>
+					</mx:DataGrid>
+				</mx:Canvas>
+				<mx:Canvas label="R" width="100%" height="100%" id="resource">
+					<mx:DataGrid dataProvider="{resourceData}" width="100%" height="100%" allowMultipleSelection="false"
+						doubleClickEnabled="false" dragEnabled="false" editable="false" resizableColumns="true" wordWrap="false" 
+						showHeaders="true" sortableColumns="false" visible="true" allowDragSelection="false" draggableColumns="false" enabled="true" 
+						selectable="false" horizontalScrollPolicy="off" variableRowHeight="true" minHeight="30" rowHeight="16">
+						<mx:columns>
+							<mx:DataGridColumn headerText="Resource" dataField="col1" width="0.25"/>
+							<mx:DataGridColumn headerText="Amount" dataField="col2" width="0.35"/>
+							<mx:DataGridColumn headerText="Rate" dataField="col3" width="0.35" showDataTips="true"/>
+						</mx:columns>
+					</mx:DataGrid>
+				</mx:Canvas>
+				<mx:Canvas label="H" width="100%" height="100%" id="heroes">
+					<mx:DataGrid dataProvider="{heroData}" width="100%" height="100%" allowMultipleSelection="false"
+						doubleClickEnabled="false" dragEnabled="false" editable="false" resizableColumns="true" wordWrap="false" 
+						showHeaders="true" sortableColumns="false" visible="true" allowDragSelection="false" draggableColumns="false" enabled="true" 
+						selectable="false" horizontalScrollPolicy="off" variableRowHeight="true" minHeight="30" rowHeight="16">
+						<mx:columns>
+							<mx:DataGridColumn headerText="Hero" dataField="col1" width="0.2"/>
+							<mx:DataGridColumn headerText="Status" dataField="col2" width="0.2"/>
+							<mx:DataGridColumn headerText="Type" dataField="col3" width="0.3" showDataTips="true"/>
+						</mx:columns>
+					</mx:DataGrid>	
+				</mx:Canvas>
+				<mx:Canvas label="B" width="100%" height="100%" id="buildings">
+					<mx:DataGrid dataProvider="{buildingData}" width="100%" height="100%" allowMultipleSelection="false"
+						doubleClickEnabled="false" dragEnabled="false" editable="false" resizableColumns="true" wordWrap="false" 
+						showHeaders="true" sortableColumns="false" visible="true" allowDragSelection="false" draggableColumns="false" enabled="true" 
+						selectable="false" horizontalScrollPolicy="off" variableRowHeight="true" minHeight="30" rowHeight="16">
+						<mx:columns>
+							<mx:DataGridColumn headerText="Building" dataField="col1" width="0.2"/>
+							<mx:DataGridColumn headerText="Level(s)" dataField="col2" width="0.6" showDataTips="true"/>
+						</mx:columns>
+					</mx:DataGrid>	
+				</mx:Canvas>
+				<mx:Canvas label="S" width="100%" height="100%" id="research">
+					<mx:DataGrid dataProvider="{researchData}" width="100%" height="100%" allowMultipleSelection="false"
+						doubleClickEnabled="false" dragEnabled="false" editable="false" resizableColumns="true" wordWrap="false" 
+						showHeaders="true" sortableColumns="false" visible="true" allowDragSelection="false" draggableColumns="false" enabled="true" 
+						selectable="false" horizontalScrollPolicy="off" variableRowHeight="true" minHeight="30" rowHeight="16">
+						<mx:columns>
+							<mx:DataGridColumn headerText="reSearch" dataField="col1" width="0.25"/>
+							<mx:DataGridColumn headerText="Level" dataField="col2" width="0.35" showDataTips="true"/>
+						</mx:columns>
+					</mx:DataGrid>	
+				</mx:Canvas>
+				<mx:Canvas label="A" width="100%" height="100%" id="armies">
+					<mx:DataGrid dataProvider="{armyData}" width="100%" height="100%" allowMultipleSelection="false"
+						doubleClickEnabled="false" dragEnabled="false" editable="false" resizableColumns="true" wordWrap="false" 
+						showHeaders="true" sortableColumns="false" visible="true" allowDragSelection="false" draggableColumns="false" enabled="true" 
+						selectable="false" horizontalScrollPolicy="off" variableRowHeight="true" minHeight="30" rowHeight="16">
+						<mx:columns>
+							<mx:DataGridColumn headerText="Army" dataField="col1" width="0.20"/>
+							<mx:DataGridColumn headerText="Target" dataField="col2" width="0.40" showDataTips="true"/>
+							<mx:DataGridColumn headerText="Remain time" dataField="col3" width="0.20"/>
+						</mx:columns>
+					</mx:DataGrid>	
+				</mx:Canvas>
+				<mx:Canvas label="T" width="100%" height="100%" id="troops">
+					<mx:DataGrid dataProvider="{troopsData}" width="100%" height="100%" allowMultipleSelection="false"
+						doubleClickEnabled="false" dragEnabled="false" editable="false" resizableColumns="true" wordWrap="false" 
+						showHeaders="true" sortableColumns="false" visible="true" allowDragSelection="false" draggableColumns="false" enabled="true" 
+						selectable="false" horizontalScrollPolicy="off" variableRowHeight="true" minHeight="30" rowHeight="16">
+						<mx:columns>
+							<mx:DataGridColumn headerText="Troop" dataField="col1" width="0.20"/>
+							<mx:DataGridColumn headerText="Available" dataField="col2" width="0.15"/>
+							<mx:DataGridColumn headerText="Total" dataField="col3" width="0.15"/>
+							<mx:DataGridColumn headerText="In Queues" dataField="col4" width="0.15"/>
+							<mx:DataGridColumn headerText="Reinforce" dataField="col5" width="0.15"/>
+						</mx:columns>
+					</mx:DataGrid>	
+				</mx:Canvas>
+				<mx:Canvas label="F" width="100%" height="100%" id="fortifications">
+					<mx:DataGrid dataProvider="{fortificationsData}" width="100%" height="100%" allowMultipleSelection="false"
+						doubleClickEnabled="false" dragEnabled="false" editable="false" resizableColumns="true" wordWrap="false" 
+						showHeaders="true" sortableColumns="false" visible="true" allowDragSelection="false" draggableColumns="false" enabled="true" 
+						selectable="false" horizontalScrollPolicy="off" variableRowHeight="true" minHeight="30" rowHeight="16">
+						<mx:columns>
+							<mx:DataGridColumn headerText="Fortification" dataField="col1" width="0.25"/>
+							<mx:DataGridColumn headerText="Available" dataField="col2" width="0.25"/>
+							<mx:DataGridColumn headerText="In Queues" dataField="col3" width="0.25"/>
+						</mx:columns>
+					</mx:DataGrid>	
+				</mx:Canvas>
+				<mx:Canvas label="X" width="100%" height="100%" id="trade">
+					<mx:DataGrid dataProvider="{tradesData}" width="100%" height="100%" allowMultipleSelection="false"
+						doubleClickEnabled="false" dragEnabled="false" editable="false" resizableColumns="true" wordWrap="false" 
+						showHeaders="true" sortableColumns="false" visible="true" allowDragSelection="false" draggableColumns="false" enabled="true" 
+						selectable="false" horizontalScrollPolicy="off" variableRowHeight="true" minHeight="30" rowHeight="16">
+						<mx:columns>
+							<mx:DataGridColumn headerText="eXchange" dataField="col1" width="0.20"/>
+							<mx:DataGridColumn headerText="Resource" dataField="col2" width="0.20"/>
+							<mx:DataGridColumn headerText="Amount" dataField="col3" width="0.30"/>
+							<mx:DataGridColumn headerText="Arrival" dataField="col4" width="0.20"/>
+						</mx:columns>
+					</mx:DataGrid>	
+				</mx:Canvas>
+				<mx:Canvas label="E" width="100%" height="100%" id="extra">
+					<mx:DataGrid dataProvider="{extraTroopData}" width="100%" height="100%" allowMultipleSelection="false"
+						doubleClickEnabled="false" dragEnabled="false" editable="false" resizableColumns="true" wordWrap="false" 
+						showHeaders="true" sortableColumns="false" visible="true" allowDragSelection="false" draggableColumns="false" enabled="true" 
+						selectable="false" horizontalScrollPolicy="off" variableRowHeight="true" minHeight="30" rowHeight="16">
+						<mx:columns>
+							<mx:DataGridColumn headerText="Extra troops" dataField="col1" width="0.20"/>
+							<mx:DataGridColumn headerText="From" dataField="col2" width="0.40" showDataTips="true"/>
+							<mx:DataGridColumn headerText="Remain time" dataField="col3" width="0.20"/>
+						</mx:columns>
+					</mx:DataGrid>	
+				</mx:Canvas>
+
+			</mx:ViewStack>
+		</mx:VBox>
+	</mx:HDividedBox>
+</mx:Canvas>

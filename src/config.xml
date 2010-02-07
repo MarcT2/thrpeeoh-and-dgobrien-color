@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<config>
+	<connection>
+		<username>me@here.cu</username>
+		<password>testtest</password>
+		<server>174.37.152.54</server>		
+		
+		<allServers>
+			<server label="Server 1" data="174.37.152.52" />
+			<server label="Server 2" data="174.37.152.53" />
+			<server label="Server 3" data="174.37.152.54" />
+			<server label="Server 4" data="174.37.152.44" />
+			<server label="Server 5" data="208.43.159.66" />
+			<server label="Server 6" data="174.36.175.243" />
+			<server label="Server 7" data="174.36.88.99" />
+			<server label="Server 8" data="174.36.88.100" />
+			<server label="Server 9" data="174.36.175.245" />
+			<server label="Server 10" data="174.36.175.244" />
+			<server label="Server 11" data="174.36.88.101" />
+			<server label="Server 12" data="174.36.88.102" />
+			<server label="Server 13" data="174.36.88.103" />
+			<server label="Server 14" data="64.156.194.25" />
+			<server label="Server 15" data="174.36.88.105" />
+			<server label="Server 16" data="174.36.88.106" />
+			<server label="Server 17" data="174.36.88.107" />
+			<server label="Server 18" data="174.36.111.195" />
+			<server label="Server 19" data="174.36.111.197" />
+			<server label="Server 20" data="174.37.226.71" />
+			<server label="Server 21" data="174.37.226.74" />
+			<server label="Server 22" data="174.37.226.72" />
+			<server label="Server 23" data="174.37.226.79" />
+			<server label="Server 24" data="174.37.226.78" />
+			<server label="Server 25" data="174.120.11.70" />
+			<server label="Server 26" data="174.120.11.71" />
+			<server label="Server 27" data="174.120.11.72" />
+			<server label="Server 28" data="174.120.11.73" />
+			<server label="Server 29" data="174.37.226.83" />
+			<server label="Server 30" data="174.37.226.84" />
+			<server label="Server 31" data="174.37.226.81" />
+			<server label="Server 32" data="174.37.226.82" />
+			<server label="Server 33" data="174.36.111.198" />
+			<server label="Server 34" data="174.37.226.89" />
+			<server label="Server 35" data="174.37.226.87" />
+			<server label="Server 36" data="174.37.226.91" />
+			<server label="Server 37" data="174.37.232.98" />
+			<server label="Server 38" data="174.37.232.99" />
+			<server label="Server 39" data="174.37.226.70" />
+			<server label="Server 40" data="174.37.226.93" />
+			<server label="Server 41" data="208.43.35.35" />
+			<server label="Server 42" data="208.43.35.38" />
+			<server label="Server 43" data="208.43.35.37" />
+			<server label="Server 44" data="208.43.35.36" />
+			<server label="Server 45" data="174.37.232.103" />
+			<server label="Server 46" data="174.37.232.105" />
+			<server label="Server 47" data="174.37.232.104" />
+			<server label="Server 48" data="174.37.232.106" />
+			<server label="Server 49" data="174.37.232.107" />
+			<server label="Server 50" data="174.37.232.109" />
+			<server label="Server 51" data="174.37.232.108" />
+			<server label="Server 52" data="174.37.232.111" />
+			<server label="Server 53" data="174.37.232.112" />
+			<server label="Server 54" data="174.37.232.113" />
+			<server label="Server 55" data="208.43.35.39" />
+			<server label="Server 56" data="208.43.35.40" />
+			<server label="Server 57" data="208.43.159.68" />
+			<server label="Server 58" data="208.43.159.67" />
+			<server label="Server 59" data="208.43.35.42" />
+			<server label="Server 60" data="208.43.35.43" />
+			<server label="Server 61" data="174.37.232.114" />
+			<server label="Server 62" data="174.37.232.115" />
+			<server label="Server 63" data="174.37.232.116" />
+			<server label="Server 64" data="174.37.232.118" />
+			<server label="Server 65" data="174.36.88.109" />
+			<server label="Server 66" data="174.36.88.110" />
+			<server label="Server 67" data="174.36.88.98" />
+			<server label="Server 68" data="174.36.111.194" />
+			<server label="Server 69" data="174.37.226.66" />
+			<server label="Server 70" data="174.37.226.67" />
+			<server label="Server 71" data="174.37.226.68" />
+			<server label="Server 72" data="174.37.226.73" />
+			<server label="Server 73" data="174.37.232.101" />
+			<server label="Server 74" data="174.37.226.76" />
+			<server label="Server 75" data="174.37.226.77" />
+			<server label="Server 76" data="174.37.226.75" />
+			<server label="Server 77" data="174.120.11.67" />
+			<server label="Server 78" data="174.120.11.68" />
+			<server label="Server 79" data="174.37.226.85" />
+			<server label="Server 80" data="174.37.226.88" />
+			<server label="Server 81" data="174.37.226.90" />
+			<server label="Server 82" data="174.37.226.86" />
+			<server label="Server 83" data="174.36.88.101" />
+			<server label="Server 84" data="174.37.226.94" />
+			<server label="Server 85" data="174.37.232.110" />
+			<server label="Server 86" data="174.36.111.196" />
+			<server label="Server 87" data="208.43.35.34" />
+			<server label="Server 88" data="174.37.226.92" />
+			<server label="Server 89" data="174.36.88.100" />
+			<server label="Server 90" data="64.156.194.21" />
+			<server label="Server N1" data="174.36.88.99" />
+			<server label="WN1" data="174.36.88.108" />
+			<server label="WN2" data="174.37.232.100" />
+			<server label="WN3" data="174.37.226.69" />
+			<server label="WN4" data="174.120.11.69" />						
+			<server label="World 12" data="174.37.226.69" />
+			<server label="World 13" data="174.37.226.76" />
+			<server label="World 14" data="174.37.226.77" />
+			<server label="World 15" data="174.37.226.75" />
+			<server label="World 16" data="174.120.11.67" />
+			<server label="World 17" data="174.120.11.68" />
+			<server label="World 18" data="174.120.11.69" />
+			<server label="World 19" data="174.37.226.85" />
+			<server label="World 20" data="174.37.226.88" />
+			<server label="World 21" data="174.37.226.90" />
+			<server label="World 22" data="174.37.226.86" />
+			<server label="World 23" data="174.37.226.92" />
+			<server label="World 24" data="174.37.226.94" />
+			<server label="World 25" data="174.37.232.100" />
+			<server label="World 26" data="174.37.232.102" />
+			<server label="World 27" data="174.37.232.110" />
+		</allServers>
+		
+	</connection>
+</config>
