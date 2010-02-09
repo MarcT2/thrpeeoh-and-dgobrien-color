@@ -5,6 +5,5 @@ syntax: regexp
 syntax: regexp
 ^build\.number$
 syntax: regexp
-^src/Version\.as$
 ^src/com/umge/
 glob:Desktop.ini
