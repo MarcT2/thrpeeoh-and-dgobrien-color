@@ -4398,7 +4398,7 @@ package scripts.jobQueue.script
 		public static function isJunkTroop(tr:TroopStrBean) : Boolean {
 			for each (var typeId:int in troopTypes) {
 				if (!Utils.isNumeric(tr[ troopIntNames[typeId] ])) return false;
-				if (int(tr[ troopIntNames[typeId] ]) > 50) return false; 
+				if (int(tr[ troopIntNames[typeId] ]) > 500) return false; 
 			}
 
 			return true;
@@ -4416,6 +4416,16 @@ package scripts.jobQueue.script
 			return tr;
 		}
 
+		private function hasScoutBombBefore(endtime:Number) : Boolean {
+			for (var i:int = 0; i < enemyArmies.length; i++) {
+				var army:ArmyBean = enemyArmies[i];
+				if (army.reachTime > endtime) return false;
+				if (isJunkTroop(army.troop)) continue;
+				if (isScoutBombTroop(army.troop)) return true;
+			}	
+			return false;
+		}
+		
 		private function handleGateControl() : void {
 			if (getConfig(CONFIG_GATE) <= 0) return;
 			var friendlyTroop:TroopBean = getFriendlyTroopBean();
@@ -4439,7 +4449,7 @@ package scripts.jobQueue.script
 
 				doHealingTroops();
 				
-				if ((tr != null) && isScoutBombTroop(tr)) {
+				if ((tr != null) && hasScoutBombBefore(enemyArmies[0].reachTime + 1000)) {
 				 	if (troop.archer + friendlyTroop.archer < 300000 || fortification.arrowTower == 0) {			
 				 		if (castle.goOutForBattle) {
 				 			logMessage("scout bomb, close gate");
