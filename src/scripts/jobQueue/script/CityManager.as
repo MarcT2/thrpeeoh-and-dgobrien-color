@@ -404,14 +404,15 @@ package scripts.jobQueue.script
 //			}
 //			ActionFactory.getInstance().getInteriorCommands().modifyCommenceRate(castle.id, 100, 100, 100, 100);
 			
-			if (isMainTown()) {
-				for each (var item:ItemBean in player.itemsArray) {
-					if (item.id != "player.box.gambling.3") continue;
-					if (item.count == 0) continue;
-					logMessage("Using " + item.count + " amulets");
-					ActionFactory.getInstance().getShopCommands().useGoods(castle.id, item.id, item.count, handleShopUseGoodResponse);
-				}
-			}
+// 			// It's best to let user to run "useitem Amulet" manually		
+//			if (isMainTown()) {
+//				for each (var item:ItemBean in player.itemsArray) {
+//					if (item.id != "player.box.gambling.3") continue;
+//					if (item.count == 0) continue;
+//					logMessage("Using " + item.count + " amulets");
+//					ActionFactory.getInstance().getShopCommands().useGoods(castle.id, item.id, item.count, handleShopUseGoodResponse);
+//				}
+//			}
 		}
 		
 		public function displayConfig() : void {

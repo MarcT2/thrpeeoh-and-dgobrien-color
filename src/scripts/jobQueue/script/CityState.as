@@ -61,7 +61,6 @@ package scripts.jobQueue.script
 		public var cityManager:CityManager;
 		public var player:PlayerBean;
 
-		private var curCommandIndex:int;
 		private var currentAction:String;
 		private var reportIdsToDelete:ArrayCollection = new ArrayCollection();
 		private var events:ArrayCollection = new ArrayCollection();
@@ -80,11 +79,6 @@ package scripts.jobQueue.script
 
 		private var map_width:int;
 		private var map_height:int;
-
-		private var marchSkillParam:int = 0; //Marchspeed of troops
-		private var driveSkillParam:int = 0; //Drivespeed of ballista, transporters etc
-		private var loadSkillParam:int = 0;
-		private var transportStationParam:int = 0; //Speed buff set by relief station lvl, not implemented yet
 				
 		public var verboseLogs:Boolean = false;
 		private var pleaseStop:Boolean = false;
@@ -622,7 +616,7 @@ package scripts.jobQueue.script
 			var report:String = "Copy and paste this into the script window\n\n";
 			onCommandResult("Found npcs");
 			for each (var npc2:Object in npcs) {
-				traveltime = getTroopTravelTime(troops,npc2.distance) * 2;
+				traveltime = cityManager.getAttackTravelTime(castle.fieldId, ToFieldId(npcs.cords), troops) * 2;
 				traveltimeacc += traveltime;
 				report += "attack " + npc2.cords 
 				+ " " 
@@ -858,31 +852,10 @@ package scripts.jobQueue.script
 			sendTroops(coords, troops, deployInt, hero, deployResources, restTime);
 		}
 
-		/**
-		 * Todo Jared - this is buggy.  It doesn't report the level of the field as intended.  Will
-		 * have to find out how to get that from the Map.
-		 */
+		// TODO
 		public function findfield(fieldType:String, fieldLevel:int, maxDistance:int) : void
 		{
 			currentAction = "find field";
-
-			if (!ResponseDispatcher.getInstance().hasEventListener(ResponseDispatcher.COMMON_MAP_INFO_SIMPLE))
-			{
-				ResponseDispatcher.getInstance().addEventListener(ResponseDispatcher.COMMON_MAP_INFO_SIMPLE,
-				function (response:MapInfoSimpleResponse) : void
-				{
-					trace(response.mapStr);
-					//if (response.bean.name.toLowerCase() == fieldType.toLowerCase())
-					//{
-					//	onCommandResult(response.bean.name + " found at " + ToCoords(response.bean.id) + " owned by " + response.bean.userName, "");
-					//}
-				});
-			}
-
-			var i:int = int(ToCoords(castle.fieldId).split(",")[0]);
-			var j:int =  int(ToCoords(castle.fieldId).split(",")[1]);
-			ActionFactory.getInstance().getCommonCommands().mapInfoSimple(i - maxDistance,j - maxDistance, maxDistance, maxDistance);
-			//findFieldRecurse(maxDistance, fieldType);
 			onCommandFinished(true);
 		}
 
@@ -992,26 +965,6 @@ package scripts.jobQueue.script
 			onCommandResult(currentAction, "complete");
 		}
 
-		/////////////////////////////////////////////////////////////////////////
-		// LIST BARRACKS
-		/////////////////////////////////////////////////////////////////////////
-		// eventually I'd like this list the queues too, I have some of the code done for that
-		// this way users can manage their barracks better
-		/////////////////////////////////////////////////////////////////////////
-		public function listbarracks() : void
-		{
-			currentAction = "listbarracks";
-			onCommandResult("Barrack Information:", "");
-			onCommandResult("ID\tLevel", "");
-			var arr:Array = TrainTroopHelper.getBarrackArray(this, 0);
-			for each(var building:BuildingBean in arr) 
-			{
-				onCommandResult(String(building.positionId) + "\t" + String(building.level), "");
-			}
-			onCommandFinished(true);
-		}
-		////////////////////////////////////////////////////////////////////////
-
 		/**
 		 * Sets the resource production levels to the specified values
 		 */
@@ -1025,7 +978,6 @@ package scripts.jobQueue.script
 		public function reinforce(coords:String, hero:String, troops:String, resources:String = "", restTime:String = "") : void
 		{
 			currentAction = "reinforce";
-
 			sendTroops(coords, troops, ObjConstants.ARMY_MISSION_SEND, hero, getResources(resources), restTime);
 		}
 
@@ -1067,60 +1019,6 @@ package scripts.jobQueue.script
 		{
 			currentAction = "transport";
 			sendTroops(coords, troops, ObjConstants.ARMY_MISSION_TRANS, "", getResources(resources));
-		}
-
-		public function listheroes():void
-		{
-			currentAction = "listheros"
-			onCommandResult("Name\tStatus\tLvl\tPol\tAtk\tInt","");
-			for each(var hero:HeroBean in castle.herosArray) 
-			{
-				onCommandResult(hero.name + "\t" + CityStateConstants.lookupHeroStatus(hero.status) + "\t" + hero.level + "\t" + hero.management + "\t" + hero.power + "\t" + hero.stratagem, "");
-			}
-			onCommandFinished(true);
-		}
-		
-		public function listresources():void
-		{
-			var nf:NumberFormatter = new NumberFormatter();
-			nf.useThousandsSeparator = true;
-			nf.useNegativeSign = true;
-			nf.precision = 0;
-			
-			// need to add directions, max storage, etc
-			currentAction = "listresources";
-			onCommandResult(" Gold: " + nf.format(castle.resource.gold), "");
-			onCommandResult(" Food: " + nf.format(castle.resource.food.amount), "");
-			onCommandResult(" Wood: " + nf.format(castle.resource.wood.amount), "");
-			onCommandResult("Stone: " + nf.format(castle.resource.stone.amount), "");
-			onCommandResult(" Iron: " + nf.format(castle.resource.iron.amount),"");
-			onCommandFinished(true);
-		}
-		
-		// just shorthand for lazy people
-		public function listres():void
-		{
-			currentAction = "listres";
-			listresources();
-		}
-		
-		
-		public function listpopulation():void
-		{
-			currentAction = "listpopulation";
-			onCommandResult("      Max: " + castle.resource.maxPopulation, "");
-			onCommandResult("  Current: " + castle.resource.curPopulation, "");
-			onCommandResult("Workers Needed: " + castle.resource.workPeople, "");
-			onCommandResult("     Idle: " + String(castle.resource.curPopulation - castle.resource.workPeople),"");
-			onCommandResult("Direction: " + castle.resource.populationDirection,"");
-			onCommandFinished(true);
-		}
-		
-		// just shorthand
-		public function listpop():void
-		{
-			currentAction = "listpop";
-			listpopulation();
 		}
 		
 		public function setmayorbyname(heroName:String):void
@@ -1337,7 +1235,7 @@ package scripts.jobQueue.script
 		public function calcProcessEndDate(startTime:Number, endTime:Number) : Date
 		{
 			var end:Date = new Date();
-			end.setTime(end.getTime() + (endTime - startTime));
+			end.setTime(endTime);
 			return end;
 		}
 
@@ -1361,7 +1259,7 @@ package scripts.jobQueue.script
 			return activeBuilding;
 		}
 
-		public function getbuildingtypecount(type:String):int
+		private function getbuildingtypecount(type:String):int
 		{
 			var typeId:int = BuildingType.fromString(type);
 			var count:int = 0;
@@ -1375,12 +1273,12 @@ package scripts.jobQueue.script
 			return count;
 		}
 
-		public function getfreepositioncount(isOutside:Boolean):int
+		private function getfreepositioncount(isOutside:Boolean):int
 		{
 			return CreationPolicy.getFreePositions(castle.buildingsArray.toArray(), isOutside).length;
 		}
 
-		public function getmaxlevel(type:String):int
+		private function getmaxlevel(type:String):int
 		{
 			var typeId:int = BuildingType.fromString(type);
 			var maxLevel:int = 0;
@@ -1394,7 +1292,7 @@ package scripts.jobQueue.script
 			return maxLevel;
 		}
 
-		public function getminbuildingcount(types:String):String
+		private function getminbuildingcount(types:String):String
 		{
 			var typeList:Array = types.split(',');
 			var minType:String = '';
@@ -1411,7 +1309,7 @@ package scripts.jobQueue.script
 			return minType;
 		}
 
-		public function getminlevel(type:String):int
+		private function getminlevel(type:String):int
 		{
 			var typeId:int = BuildingType.fromString(type);
 			var minLevel:int = 100;
@@ -2001,27 +1899,7 @@ package scripts.jobQueue.script
 				}
 		}
 
-		private function checkArmyMarchStatus() : Boolean
-		{
-			var result:Boolean = true;
 
-			if (currentAttacks.length == 0 && currentTransports.length == 0)
-			{
-				// bug here.  If all troops are, when bot logs in it thinks there are
-				// no attacks
-				//return false;
-			}
-
-			// do fancy return time calc here:
-			/*
-			for each (var a:ArmyBean in currentAttacks)
-			{
-
-			}
-			*/
-
-			return result;
-		}
 
 		private function checkQuestType(questType:QuestTypeResponse) : void
 		{
@@ -2363,85 +2241,6 @@ package scripts.jobQueue.script
 			levy_int(levy);
 		}
 
-				/**
-		 * Starting at the castle, this search will conduct a 4 quadrant search for the specified field.  When a matching field is found,
-		 * its name, coords and owner are logged.
-		 * The search must start in X=1, Y=-1
-		 */
-		private function findFieldRecurse(maxDistance:int, fieldType:String, x:int=1, y:int=-1) : void // x is column direction, y is row direction
-		{
-			var loop:int;
-			var i:int; // i is column
-			var j:int; // j is row
-			var iStart:int;
-			var iSize:int;
-			var jStart:int;
-			var jSize:int;
-
-			jStart = int(ToCoords(castle.fieldId).split(",")[1]);
-			iStart = int(ToCoords(castle.fieldId).split(",")[0]);
-
-			if (x + y == 0)
-			{
-				iStart + x;
-				iSize = maxDistance;
-				jSize = maxDistance + 1;
-			}
-			else
-			{
-				jStart + y;
-				iSize = maxDistance + 1;
-				jSize = maxDistance;
-			}
-
-			i = iStart;
-			j = jStart;
-
-			/*do
-			{
-
-				//ActionFactory.getInstance().getFieldCommand().getOtherFieldInfo(ToFieldId(String(i + "," + j)));
-
-				if (x + y == 0)
-				{
-					i += x;
-					if (i - iStart == maxDistance * x)
-					{
-						j += y;
-						i -= maxDistance * x;
-					}
-				}
-				else
-				{
-					j += y;
-					if (j - jStart == maxDistance * y)
-					{
-						i += x;
-						j -= maxDistance * y;
-					}
-				}
-			} while (++loop < iSize * jSize - 1);
-			*/
-			if (x < 0 && y < 0)
-			{
-				return;
-			}
-			else if (y < 0)
-			{
-				y = 1;
-			}
-			else if (x > 0)
-			{
-				x = -1;
-			}
-			else if (y > 0)
-			{
-				y = -1;
-			}
-
-			findFieldRecurse(maxDistance, fieldType, x, y);
-		}
-
 		private function findHeroByName(heroName:String):HeroBean
 		{
 			var foundHero:HeroBean = null;
@@ -2643,50 +2442,14 @@ package scripts.jobQueue.script
 			}
 
 			// print list of all available tech
-			var availableList:String = "";
-
 			for each (var techItem:AvailableResearchListBean in techList.acailableResearchBeansArray)
 			{
 		 		this.m_techLevels[String(techItem.typeId)] = techItem.avalevel;
 		 		
-		 		switch (techItem.typeId)
-		 		{	
-		 			case TechConstants.MARCH_SKILL:
-		 				this.marchSkillParam = (techItem.avalevel) * 10;
-		 				break;
-		 			case TechConstants.DRIVE_SKILL:
-		 				this.driveSkillParam = (techItem.avalevel) * 5;
-		 				break;
-		 			case TechConstants.LOAD_TECH:
-		 				this.loadSkillParam = (techItem.avalevel) * 10;
-		 				break;
-		 			default:
-		 				break;
-		 		}
-		 		
 				if (techItem.upgradeing && techItem.castleId == castle.id)
 				{
 					currentResearch = techItem;
-					availableList += "\n\t\tCurrently researching " +
-						TechType.toString(techItem.typeId) +
-						" level " + (techItem.level + 1) +
-						".  End time: " + new Date(techItem.endTime).toLocaleString();
 				}
-				else if (isResearchAllowed(techItem,techList))
-				{
-					availableList += "\n\t\t"+TechType.toString(techItem.typeId)+": "+techItem.avalevel.toString()+"/"+techItem.level.toString();
-				}
-				else
-				{
-					availableList += "\nUnavailable: "+TechType.toString(techItem.typeId)+": "+techItem.avalevel.toString()+"/"+techItem.level.toString();
-				}
-			}
-
-			// output and signal complete only if caller was checkresearch
-			if (currentAction == "checkresearch")
-			{
-				onCommandResult("CheckResearch", "\n\tAvailable for upgrade:"+availableList);
-				onCommandFinished(true);
 			}
 		}
 
@@ -2974,6 +2737,13 @@ package scripts.jobQueue.script
 		private function setmayorbynamerun(heroName:String):Boolean 
 		{
 			var result:Boolean = false;
+			
+			if (heroName == "none") {
+				onCommandResult("Remove mayor");
+				ActionFactory.getInstance().getHeroCommand().dischargeChief(castle.id);
+				return true;
+			}
+
 			var foundHero:HeroBean = findHeroByName(heroName);
 			if(foundHero == null)
 			{
@@ -3128,17 +2898,6 @@ package scripts.jobQueue.script
 
 					onCommandResult(currentAction,  "- starting march to " + coords + " arrival at " + arrivalTime.toLocaleTimeString() + (selectedHero == null ? "" : " with " + selectedHero.name + " and") + " with " + troopsToString(troopObj) + " in " + Utils.formatTime(travelTime+newArmy.restTime));
 					ActionFactory.getInstance().getArmyCommands().newArmy(castle.id, newArmy);
-				}
-				else
-				{
-					if (!checkArmyMarchStatus())
-					{
-						//todo jared - make this error more useful based upon which condition above failed
-						// if all the above checks failed and there are no marching armies
-						// then there is a problem with the attack command.
-						onCommandFinished(new ScriptError("Problem with deploy params: " + coords + " / " + hero + " / " + troops, -9999));
-						return;
-					}
 				}
 			});
 
@@ -3412,22 +3171,6 @@ package scripts.jobQueue.script
 			
 			update.resource.copyTo(castle.resource);
 		}
-		
-//		private function updateInjuredTroops(update:InjuredTroopUpdate) : void
-//		{
-//			if (update.castleId != castle.id)
-//			{
-//				return;
-//			}
-//
-//			var message:String = troopsToString(update.troop);
-//
-//			if (message != "")
-//			{
-//				onCommandResult("**Injured troops** " + message, "Attempting cure.");
-//				ActionFactory.getInstance().getArmyCommands().cureInjuredTroop(castle.id);
-//			}
-//		}
 
 		private function updateTroops(update:TroopUpdate) : void
 		{
@@ -3448,25 +3191,25 @@ package scripts.jobQueue.script
 			return;
 		}
 						
-		private function troopSpeed(troopCount:int, troopType:int, SkillParam:int, distance:Number) : int
-        {
- 
-            var loc1:*;
-            loc1 = distance * 60000;
-            var basespeed:*;
-            basespeed = TroopEumDefine.getTroopEumByType(troopType).speed;
-            var speed:*;
-             
-            if (troopCount == 0)
-            {
-            	return 0;
-            }
-            else 
-            {
-                speed = basespeed * (1 + SkillParam / 100);
-                return (loc1 / speed * 1000) / 1000;
-            }
-        }
+//		private function troopSpeed(troopCount:int, troopType:int, SkillParam:int, distance:Number) : int
+//        {
+// 
+//            var loc1:*;
+//            loc1 = distance * 60000;
+//            var basespeed:*;
+//            basespeed = TroopEumDefine.getTroopEumByType(troopType).speed;
+//            var speed:*;
+//             
+//            if (troopCount == 0)
+//            {
+//            	return 0;
+//            }
+//            else 
+//            {
+//                speed = basespeed * (1 + SkillParam / 100);
+//                return (loc1 / speed * 1000) / 1000;
+//            }
+//        }
 
         private function getDistance(base1:int=0, target2:int=0) : Number {
         	if (base1 == 0) base1 = castle.fieldId;
@@ -3493,77 +3236,6 @@ package scripts.jobQueue.script
 
 			return 1;
 		}
-        
-		private function getTroopTravelTime(troops:TroopBean, distance:Number) : int
-		{
-			var sec:int;
-			var temp:int;
-			sec = 0;
-						
-			temp = troopSpeed(troops.peasants,TFConstants.T_PEASANTS, marchSkillParam, distance);
-			if (sec < temp)
-			{
-				sec = temp;
-			}    
-			temp = troopSpeed(troops.militia ,TFConstants.T_MILITIA, marchSkillParam, distance);
-			if (sec < temp)
-			{
-				sec = temp;
-			}    
-			temp = troopSpeed(troops.scouter ,TFConstants.T_SCOUTER, marchSkillParam, distance);
-			if (sec < temp)
-			{
-				sec = temp;
-			}            
-			temp = troopSpeed(troops.pikemen ,TFConstants.T_PIKEMAN, marchSkillParam, distance);
-			if (sec < temp)
-			{
-				sec = temp;
-			}    
-			temp = troopSpeed(troops.swordsmen ,TFConstants.T_SWORDSMEN, marchSkillParam, distance);
-			if (sec < temp)
-			{
-				sec = temp;
-			}    
-			temp = troopSpeed(troops.archer ,TFConstants.T_ARCHER, marchSkillParam, distance);
-			if (sec < temp)
-			{
-				sec = temp;
-			}    
-			temp = troopSpeed(troops.lightCavalry ,TFConstants.T_LIGHTCAVALRY, driveSkillParam, distance);
-			if (sec < temp)
-			{
-				sec = temp;
-			}    
-			temp = troopSpeed(troops.heavyCavalry ,TFConstants.T_HEAVYCAVALRY, driveSkillParam, distance);
-			if (sec < temp)
-			{
-				sec = temp;
-			}    
-			temp = troopSpeed(troops.carriage ,TFConstants.T_CARRIAGE, driveSkillParam, distance);
-			if (sec < temp)
-			{
-				sec = temp;
-			}
-			temp = troopSpeed(troops.ballista ,TFConstants.T_BALLISTA, driveSkillParam, distance);
-			if (sec < temp)
-			{
-				sec = temp;
-			}    
-			temp = troopSpeed(troops.batteringRam ,TFConstants.T_BATTERINGRAM, driveSkillParam, distance);
-			if (sec < temp)
-			{
-				sec = temp;
-			}    
-			temp = troopSpeed(troops.catapult ,TFConstants.T_CATAPULT, driveSkillParam, distance);
-			if (sec < temp)
-			{
-				sec = temp;
-			}        
-			
-        	return sec;
-        
-  		}
   		
   		private static function timeToString(arg1:int):String
         {
