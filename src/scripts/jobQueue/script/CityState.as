@@ -616,7 +616,7 @@ package scripts.jobQueue.script
 			var report:String = "Copy and paste this into the script window\n\n";
 			onCommandResult("Found npcs");
 			for each (var npc2:Object in npcs) {
-				traveltime = cityManager.getAttackTravelTime(castle.fieldId, ToFieldId(npcs.cords), troops) * 2;
+				traveltime = cityManager.getAttackTravelTime(castle.fieldId, ToFieldId(npc2.cords), troops) * 2;
 				traveltimeacc += traveltime;
 				report += "attack " + npc2.cords 
 				+ " " 
@@ -2427,7 +2427,7 @@ package scripts.jobQueue.script
 				if (resourceType.substr(0,1) == "w")
 					resourceType = "wood";
 
-				resourceObj[resourceType] = int(r[1]);
+				resourceObj[resourceType] = Number(r[1]);
 			}
 
 			return resourceObj;
