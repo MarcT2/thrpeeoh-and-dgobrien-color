@@ -13,8 +13,8 @@ package scripts.jobQueue.script
 	
 	public class Map
 	{
-		private static var fieldNames:Array = new Array("", "Forest", "Desert", "Hill", "Swamp",
-			"Grass Land", "Lake", "", "", "", "Flat", "Castle", "NPC"
+		public static var fieldNames:Array = new Array("", "Forest", "Desert", "Hill", "Swamp",
+			"GrassLand", "Lake", "", "", "", "Flat", "Castle", "NPC"
 		);
 				
 		private static var timer:Timer = null;
@@ -234,6 +234,35 @@ package scripts.jobQueue.script
 				}
 			}
 			return result;
-		}		
+		}
+		
+		public static function coordStringToFieldId(coords:String) : int {			
+			var first:int;
+			var second:int;
+			coords = coords.replace(".", ",");
+			var coordArray:Array = coords.split(",");
+			
+			if (coordArray.length == 2)
+			{
+				first = int(coordArray[0]);
+				second = int(coordArray[1]);
+				var teststring:String = "" + first + "," + second
+				if (teststring == coords && WIDTH > 0 && first < WIDTH && second < HEIGHT)
+				{ 
+					return second * WIDTH + first;
+				}
+			}
+			
+			// -1 == and invalid coord was passed in.
+			return -1;
+		}
+		
+		public static function getFieldType(str:String) : int {
+			for (var i:int = 0; i < fieldNames.length; i++) {
+				if (fieldNames[i].length == 0) continue;
+				if (fieldNames[i].toLowerCase() == str.toLowerCase()) return i;
+			}
+			return -1;
+		}
 	}
 }

@@ -24,7 +24,6 @@ package scripts.jobQueue.script
 	import com.umge.sovt.common.constants.ErrorCode;
 	import com.umge.sovt.common.constants.ObjConstants;
 	import com.umge.sovt.common.constants.TFConstants;
-	import com.umge.sovt.common.constants.TechConstants;
 	import com.umge.sovt.common.module.CommandResponse;
 	import com.umge.sovt.common.module.common.MapInfoSimpleResponse;
 	import com.umge.sovt.common.module.hero.HeroListResponse;
@@ -50,7 +49,6 @@ package scripts.jobQueue.script
 	import flash.utils.*;
 	
 	import mx.collections.ArrayCollection;
-	import mx.formatters.NumberFormatter;
 
 	/**
 	 * City state holds the state of the city and all the commands available
@@ -167,7 +165,6 @@ package scripts.jobQueue.script
 			}
 		}
 
-
 		public function resetgoals():void {
 			currentAction = "resetgoals";
 			cityManager.resetAllConditions();
@@ -187,7 +184,7 @@ package scripts.jobQueue.script
 		public function dumpresource(coords:String, cond:String, res:String) : void
 		{
 			currentAction = "dump resource";
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			cityManager.dumpResource(targetId, getResources(cond), getResources(res));
 			onCommandFinished(true);
 		}		
@@ -195,14 +192,14 @@ package scripts.jobQueue.script
 		public function dumptroop(coords:String, cond:String, tr:String) : void
 		{
 			currentAction = "dump troop";
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			cityManager.dumpTroop(targetId, getTroops(cond), getTroops(tr));
 			onCommandFinished(true);
 		}
 		
 		public function buildcity(coords:String) : void {
 			currentAction = "buildcity";
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			cityManager.buildcity(targetId);
 			onCommandFinished(true);			
 		}
@@ -216,7 +213,7 @@ package scripts.jobQueue.script
 		public function capture(coords:String, numCav:int = 500) : void
 		{
 			currentAction = "capture";
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			cityManager.loyaltyattack(targetId, numCav, true);
 			onCommandFinished(true);
 		}
@@ -232,6 +229,32 @@ package scripts.jobQueue.script
 			cityManager.setBallsUsed(str)
 			onCommandFinished(true);
 		}
+		
+		public function npctroops(str:String) : void {
+			currentAction = "npctroops";
+			cityManager.npctroops(str);
+			onCommandFinished(true);
+		}
+		
+		public function valleytroops(str:String) : void {
+			currentAction = "valleytroops";
+			cityManager.valleytroops(str);
+			onCommandFinished(true);
+
+		}
+		
+		public function huntingpos(coords:String) : void {
+			currentAction = "huntingpos";
+			cityManager.huntingpos(coords);
+			onCommandFinished(true);			
+		}
+				
+		public function npcheroes(str:String) : void {
+			currentAction = "npcheroes";
+			cityManager.npcheroes(str);
+			onCommandFinished(true);
+		}
+		
 		public function abandontown() : void
 		{
 			currentAction = "abandontown";
@@ -241,7 +264,7 @@ package scripts.jobQueue.script
 		public function loyaltyattack(coords:String, numCav:int = 500) : void
 		{
 			currentAction = "loyaltyattack";
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			cityManager.loyaltyattack(targetId, numCav, false);
 			onCommandFinished(true);
 		}
@@ -249,7 +272,7 @@ package scripts.jobQueue.script
 		public function setnpcflag(coords:String) : void
 		{
 			currentAction = "setnpcflag";
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			cityManager.tagNpc(targetId, true);
 			onCommandFinished(true);
 		}
@@ -257,7 +280,7 @@ package scripts.jobQueue.script
 		public function unsetnpcflag(coords:String) : void
 		{
 			currentAction = "unsetnpcflag";
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			cityManager.tagNpc(targetId, false);
 			onCommandFinished(true);
 		}
@@ -265,7 +288,7 @@ package scripts.jobQueue.script
 		public function spamattack(coords:String, troop:String, count:int) : void
 		{
 			currentAction = "spamattack";
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			cityManager.spamattack(targetId, getTroops(troop), count);
 			onCommandFinished(true);
 		}
@@ -280,7 +303,7 @@ package scripts.jobQueue.script
 		public function guardedattack(coords:String, attackTroop:String, nScouts:int, defendTroop:String) : void
 		{
 			currentAction = "guardedattack";
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			var attackTroopBean:TroopBean = getTroops(attackTroop);
 			var defendTroopBean:TroopBean = getTroops(defendTroop);
 			
@@ -295,7 +318,7 @@ package scripts.jobQueue.script
 		public function setguard(coords:String, defendTroop:String) : void
 		{
 			currentAction = "setguard";
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			var defendTroopBean:TroopBean = getTroops(defendTroop);
 			
 			if (defendTroopBean == null) {
@@ -322,7 +345,7 @@ package scripts.jobQueue.script
 		public function recall(coords:String) : void
 		{
 			currentAction = "recall";
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			var army:ArmyBean;
 			for each (army in currentAttacks) {
 				if (army.targetFieldId == targetId) {
@@ -383,11 +406,15 @@ package scripts.jobQueue.script
 			onCommandFinished(true);
 		}
 
-		
-        public function traveltime(coords:String, troops:String) : void
+        public function traveltime(coords:String, troops:String) : void {
+        	onCommandResult("traveltime is deprecated, please use travelinfo instead");
+			travelinfo(coords, troops);
+		}
+
+        public function travelinfo(coords:String, troops:String) : void
         {
            	currentAction = "traveltime";
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			var troop:TroopBean = getTroops(troops);
 			var distance:Number = getDistance(castle.fieldId, targetId);
             var attackTime:int = cityManager.getAttackTravelTime(castle.fieldId, targetId, troop);
@@ -397,7 +424,8 @@ package scripts.jobQueue.script
 	            var speedup:int = getFriendlySpeedUp();
 	            var transTime:int = attackTime/speedup;
 	            distance = int(distance*100) / 100.0;
-	            onCommandResult("Distance to " + coords + ": " + distance + ", attack time: " + Utils.formatTime(attackTime) + ", reinforce time: " + Utils.formatTime(transTime));	
+	            onCommandResult("Distance to " + coords + ": " + distance + ", attack time: " + Utils.formatTime(attackTime) + ", reinforce time: " + Utils.formatTime(transTime) 
+	            	+ ", carrying load: " + cityManager.getCarryingLoad(troop) + ", food needed to attack: " + int(cityManager.getFoodConsume(troop)*attackTime/3600*2) + ", to reinforce: " + int(cityManager.getFoodConsume(troop)*transTime/3600*2));	
             }
 			onCommandFinished(true);
         }
@@ -475,7 +503,7 @@ package scripts.jobQueue.script
 		public function scanmap(coords:String, r:int) : void {
 			currentAction = "scanmap";
 
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			var cx:int = Map.getX(targetId);
 			var cy:int = Map.getY(targetId);
 
@@ -495,7 +523,7 @@ package scripts.jobQueue.script
 		public function rescanmap(coords:String, r:int) : void {
 			currentAction = "rescanmap";
 
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			var cx:int = Map.getX(targetId);
 			var cy:int = Map.getY(targetId);
 			Map.resetArea(cx, cy, r);
@@ -602,7 +630,7 @@ package scripts.jobQueue.script
 					var yy:int = y;
 					if (y < 0) yy = map_width + y;
 					if (map.substr(strIndex,2) == CallbackParams.autofarmnpclevel) {
-						var npc:Object = {distance:getDistance(0, ToFieldId(xx + "," + yy)), cords:xx + "," + yy};
+						var npc:Object = {distance:getDistance(0, Map.coordStringToFieldId(xx + "," + yy)), cords:xx + "," + yy};
 						npcs.push(npc);
 					}
 					strIndex += 2;
@@ -616,7 +644,7 @@ package scripts.jobQueue.script
 			var report:String = "Copy and paste this into the script window\n\n";
 			onCommandResult("Found npcs");
 			for each (var npc2:Object in npcs) {
-				traveltime = cityManager.getAttackTravelTime(castle.fieldId, ToFieldId(npc2.cords), troops) * 2;
+				traveltime = cityManager.getAttackTravelTime(castle.fieldId, Map.coordStringToFieldId(npc2.cords), troops) * 2;
 				traveltimeacc += traveltime;
 				report += "attack " + npc2.cords 
 				+ " " 
@@ -852,10 +880,55 @@ package scripts.jobQueue.script
 			sendTroops(coords, troops, deployInt, hero, deployResources, restTime);
 		}
 
-		// TODO
-		public function findfield(fieldType:String, fieldLevel:int, maxDistance:int) : void
+		private function compareByDistanceToCastle(field1:int, field2:int) : int {
+			var dist1:Number = Map.fieldDistance(field1, castle.fieldId);
+			var dist2:Number = Map.fieldDistance(field2, castle.fieldId);
+			
+			if (dist1 < dist2) return -1;
+			if (dist1 > dist2) return 1;
+			return 0;
+		}
+
+		public function findfield(fieldTypeStr:String, fieldLevel:int, r:int) : void
 		{
 			currentAction = "find field";
+			var cx:int = Map.getX(castle.fieldId);
+			var cy:int = Map.getY(castle.fieldId);
+			var fieldType:int = Map.getFieldType(fieldTypeStr);
+			var fieldId:int;
+			
+			if (fieldType == -1) {
+				onCommandResult("Invalid field type: " + fieldTypeStr + ", must be among " + Map.fieldNames.join(" "));
+				onCommandFinished(true);
+				return;				
+			} else if (!Map.isMapReady(cx, cy, r)) {
+				onCommandResult("Map is not ready, please run: scanmap " + cx + "," + cy + " " + r);
+				onCommandFinished(true);
+				return;
+			}
+			
+			var arr:Array = new Array();
+			for (var x:int = cx - r; x <= cx + r; x++) {
+				for (var y:int = cy - r; y <= cy + r; y++) {
+					if ((x-cx)*(x-cx) + (y-cy)*(y-cy) > r*r) continue;
+					fieldId = Map.getFieldId(x, y);
+					if (Map.getType(fieldId) == fieldType && Map.getLevel(fieldId) == fieldLevel) arr.push(fieldId);
+				}
+			}
+			
+			if (arr.length == 0) {
+				onCommandResult("No field found for " + fieldTypeStr + " level " + fieldLevel + " within radius " + r);
+				onCommandFinished(true);
+				return;				
+			}
+
+			arr.sort(compareByDistanceToCastle);
+			
+			var result:String = "";
+			for each(fieldId in arr) {
+				result += " " + Map.getX(fieldId) + "," + Map.getY(fieldId);
+			}
+			onCommandResult(fieldTypeStr + ":" + fieldLevel + result);
 			onCommandFinished(true);
 		}
 
@@ -1150,7 +1223,7 @@ package scripts.jobQueue.script
 		public function abandon(coords:String) : void
 		{
 			currentAction = "abandon";
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			if(targetId >= 0)
 			{
 				ActionFactory.getInstance().getFieldCommand().giveUpField(targetId);
@@ -1589,31 +1662,6 @@ package scripts.jobQueue.script
 			return result;
 		}
 
-		/**
-		 * Converts field coords (x, y) to a fieldId used
-		 * in commands
-		 */
-		public function ToFieldId(coords:String) : int
-		{			
-			var first:int;
-			var second:int;
-			coords = coords.replace(".", ",");
-			var coordArray:Array = coords.split(",");
-			
-			if (coordArray.length == 2)
-			{
-				first = int(coordArray[0]);
-				second = int(coordArray[1]);
-				var teststring:String = "" + first + "," + second
-				if (teststring == coords && map_width > 0 && first < map_width && second < map_height)
-				{ 
-					return second * map_width + first;
-				}
-			}
-			
-			// -1 == and invalid coord was passed in.
-			return -1;
-		}
 		/**
 		 * Response handler for the SelfArmysUpdate response sent
 		 * when the status of a marching army changes
@@ -2777,7 +2825,7 @@ package scripts.jobQueue.script
 		private function sendTroops(coords:String, troops:String, marchType:int, hero:String = "", resources:ResourceBean = null, restTime:String = "") : void
 		{
 			var armyReady:Boolean = false;
-			var targetId:int = ToFieldId(coords);
+			var targetId:int = Map.coordStringToFieldId(coords);
 			var selectedHero:HeroBean = null;
 			var troopObj:TroopBean;
 			var troopWaitTimer:Timer = new Timer(0);

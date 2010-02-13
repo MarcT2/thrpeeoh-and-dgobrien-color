@@ -128,6 +128,7 @@ package scripts.jobQueue.script
 		private var doingComfortRelief:Boolean = false;
 		private var lastNewReport:NewReport = null;
 		
+		// list of places to be npc'ed, and the town being built
 		private static var npcLocations:Array = new Array();
 		private static var buildCityLocation:int = -1;
 		private static var buildCityFrom:int = -1;
@@ -150,6 +151,13 @@ package scripts.jobQueue.script
 		private var buildingRequirements:ArrayCollection = new ArrayCollection();
 		private var troopRequirements:ArrayCollection = new ArrayCollection();
 		private var fortificationsRequirements:ArrayCollection = new ArrayCollection();
+		
+		// other customizations
+		private var npcHeroes:Array = null;
+		private var npcTroopBean:TroopBean = null;
+		private var npcList:Array = null;
+		private var valleyTroopBean:TroopBean = null;
+		private var huntingLocation:int = -1;
 		
 		private function errorCaught(errorMsg:String) : void {
 			logMessage("Error: " + errorMsg);
@@ -482,7 +490,14 @@ package scripts.jobQueue.script
 			fortificationsRequirements.removeAll();
 			troopRequirements.removeAll();
 			configs = new Object();
+			
+			npcHeroes = null;
+			npcTroopBean = null;
+			npcList = null;			
+			valleyTroopBean = null;
+			huntingLocation = -1;
 		}
+		
 		public function addTroopGoal(troopRequirement:TroopBean) : void {
 			troopRequirements.addItem(troopRequirement);
 			configs[CONFIG_TROOP] = 1;
@@ -1557,7 +1572,7 @@ package scripts.jobQueue.script
 			return r;
 		}
 		
-		private function getFoodConsume(tr:TroopBean) : Number {
+		public function getFoodConsume(tr:TroopBean) : Number {
 			return 2*tr.peasants + 3*tr.militia + 5*tr.scouter + 6*tr.pikemen + 7*tr.swordsmen +
 				9*tr.archer + 18*tr.lightCavalry + 35*tr.heavyCavalry + 10*tr.carriage +
 				50*tr.ballista + 100*tr.batteringRam + 250*tr.catapult;
@@ -2094,8 +2109,20 @@ package scripts.jobQueue.script
 			return best;
 		}
 
+		private function getHeroForNPCFromList(arr:Array) : HeroBean {
+			for each(var hero:HeroBean in heroes) {
+				if (hero.status != HeroConstants.HERO_FREE_STATU) continue;
+				for each(var heroName:String in arr) {
+					if (hero.name.toLowerCase() == heroName.toLowerCase()) return hero;
+				}
+			}
+			return null;
+		}
+
 		// select a hero for training
-		private function getHeroForNPC() : HeroBean {		
+		private function getHeroForNPC() : HeroBean {
+			if (npcHeroes != null) return getHeroForNPCFromList(npcHeroes);
+			
 			var config:int = getConfig(CONFIG_HERO);
 			var pBest:HeroBean = bestPoliticsHero();
 			var iBest:HeroBean = (getConfig(CONFIG_RESEARCH) > 0 && getConfig(CONFIG_HERO) % 10 > 0) ? bestIntelHero() : null;
@@ -3577,8 +3604,18 @@ package scripts.jobQueue.script
 			}
 			return count;
 		}		
+		
+		private function getPresetTroopBean(tr:TroopBean) : TroopBean {
+			var trObject:Object = tr.toObject();
+			for (var key:String in trObject) {
+				if (tr[key] > troop[key]) return null;
+			}
+			return tr;
+		}
+		
 		private function getTroopBeanForNPCLevel(level:int, wantResource:Boolean) : TroopBean {
 			if (level <= 0 || level > 5) return null;
+			if (npcTroopBean != null) return getPresetTroopBean(npcTroopBean);
 
 			var archery:int = getTechLevel(TechConstants.THROW_SKILL);
 			var hbr:int = getTechLevel(TechConstants.DRIVE_SKILL);
@@ -3635,6 +3672,7 @@ package scripts.jobQueue.script
 
 		private function getTroopBeanForLevel(level:int) : TroopBean {
 			if (level == -1) return null;
+			if (valleyTroopBean != null) return getPresetTroopBean(valleyTroopBean);
 			
 			var tr:TroopBean = new TroopBean();
 			var archers:Array = new Array(0, 50, 100, 200,  400,  800, 1600,  3200,  6400, 12800, 19990);
@@ -4182,10 +4220,13 @@ package scripts.jobQueue.script
 				logMessage("attack levels: " + minLevel + "," + maxLevel);
 			}
 
+			// use preset npcList if given, otherwise use localNPCs
+			var npcs:Array = (npcList != null) ? npcList : localNPCs;
 			var validCount:int = 0;
-			for (var ind:int = 0; ind < localNPCs.length; ind++) {
+
+			for (var ind:int = 0; ind < npcs.length; ind++) {
 				var fieldId:int = localNPCs[ind];
-				
+
 				// evasionFieldId canot be used as training npc to avoid confusion (especially on restart)
 				if (training && fieldId == evasionFieldId) continue;
 
@@ -4195,9 +4236,9 @@ package scripts.jobQueue.script
 				var type:int = Map.getType(fieldId);
 				if (type == -1) return false;	
 				if (type != FieldConstants.TYPE_NPC) {
-					logMessage("NPC field is no longer an npc: " + Map.fieldIdToString(fieldId));
-					localNPCs.splice(ind, 1);
-					continue;				
+					logMessage(Map.fieldIdToString(fieldId) + " is not or is no longer an npc");
+					npcs.splice(ind, 1);
+					continue;
 				}
 
 				var wantResource:Boolean = (!training) ? true : (getConfig(CONFIG_TRAINING) == 1) ? true : false;
@@ -4241,7 +4282,7 @@ package scripts.jobQueue.script
 		private function handleAbandonLocalField() : void {
 			if (localFieldsDetailInfo.length == 0) return;
 			if (getConfig(CONFIG_HUNTING) <= 0) return;
-			var targetField:int = localFieldsDetailInfo[0].id;
+			var targetField:int = (huntingLocation != -1) ? huntingLocation : localFieldsDetailInfo[0].id;
 			var free:Boolean = false;
 
 			for each (var field:FieldBean in fields) {
@@ -4263,8 +4304,8 @@ package scripts.jobQueue.script
 		private function handleAttackLocalFields() : Boolean {
 			handleAbandonLocalField();
 			
-			if (localFieldsDetailInfo.length == 0) return false;
-			var targetField:int = localFieldsDetailInfo[0].id;
+			if (localFieldsDetailInfo.length == 0) return false;	// should not happen
+			var targetField:int = (huntingLocation != -1) ? huntingLocation : localFieldsDetailInfo[0].id;
 			var level:int = Map.getLevel(targetField);
 						
 			// if the level of the target field change for any reason, recall troop
@@ -4295,7 +4336,7 @@ package scripts.jobQueue.script
 				return false;		// wait for the field to be released
 			} else if (!detail.canOccupy || detail.state != 1) {
 				logMessage("CANNOT ATTACK " + Map.fieldIdToString(targetField));
-				localFieldsDetailInfo.removeItemAt(0);
+				if (targetField == localFieldsDetailInfo[0]) localFieldsDetailInfo.removeItemAt(0);
 				return false;
 			}
 			
@@ -4303,7 +4344,7 @@ package scripts.jobQueue.script
 			if (type == -1) return false;	
 			if (type == FieldConstants.TYPE_NPC || type == FieldConstants.TYPE_CASTLE) {
 				logMessage("Local field is now a npc or castle: " + Map.fieldIdToString(targetField));
-				localFieldsDetailInfo.removeItemAt(0);
+				if (targetField == localFieldsDetailInfo[0]) localFieldsDetailInfo.removeItemAt(0);
 				return false;				
 			}
 
@@ -4900,7 +4941,78 @@ package scripts.jobQueue.script
 			}
 			return true;
 		}
+
+		public function npcheroes(str:String) : void {
+			var arr:Array = str.toLowerCase().split(",");
+			
+			for each(var heroName:String in arr) {
+				var found:Boolean = false;
+				for each (var hero:HeroBean in heroes) {
+					if (hero.name.toLowerCase() == heroName) found = true;
+				}
+				if (!found) {
+					logMessage("Warning: hero " + heroName + " is not currently in this town");
+				}
+			}
+			npcHeroes = arr;
+			// logMessage("List of heroes used for npc farming: " + npcHeroes.join(","));
+		}
 		
+		public function npctroops(str:String) : Boolean {
+			var tr:TroopBean = CityState.getTroopsStatic(str);
+			if (tr == null) {
+				logMessage("Invalid troop: " + str);
+				return false;
+			} else {
+				npcTroopBean = tr;
+				return true;
+			}
+		}
+		
+		public function valleytroops(str:String) : Boolean {
+			var tr:TroopBean = CityState.getTroopsStatic(str);
+			if (tr == null) {
+				logMessage("Invalid troop: " + str);
+				return false;
+			} else {
+				valleyTroopBean = tr;
+				return true;
+			}
+		}
+		
+		public function huntingpos(coords:String) : Boolean {
+			var targetId:int = Map.coordStringToFieldId(coords);
+			if (targetId == -1) return false;
+			huntingLocation = targetId;
+			return true;
+		}
+
+		public function npclist(str:String) : Boolean {
+			var arr:Array = str.toLowerCase().split(" ");
+			var error:Boolean = false;
+			var any:Boolean = false;
+			
+			if (npcList == null) npcList = new Array();
+			for each(var locStr:String in arr) {
+				var fieldId:int = Map.coordStringToFieldId(locStr);
+				if (fieldId == -1) {
+					logMessage("Invalid location " + locStr);
+					error = true;
+				} else if (npcList.indexOf(fieldId) != -1) {
+					logMessage("Repetitive location " + locStr);
+					error = true;
+				} else {
+					npcList.push(fieldId);
+					any = true;
+				}
+			}
+			if (!any) {
+				logMessage("No npc added from " + str);
+				error = true;
+			}
+			return error;
+		}
+				
 		private var loyaltyAttackFieldId:int = -1;
 		private var loyaltyAttackNumCav:int = 500;
 		private var loyaltyAttackOnly:Boolean = true;
@@ -5123,6 +5235,24 @@ package scripts.jobQueue.script
 		  	
 		  	if (speed == 10000) return 0;		// odd case
 		  	return speed;  	
+		}
+
+		public function getCarryingLoad(bean:TroopBean) : Number {
+			if (researches == null) return 0; 		// can't compute yet
+			var total:Number = 0;
+
+			var types:Array = new Array(TFConstants.T_BATTERINGRAM, TFConstants.T_BALLISTA, TFConstants.T_CARRIAGE, TFConstants.T_SWORDSMEN, TFConstants.T_PIKEMAN, TFConstants.T_LIGHTCAVALRY, TFConstants.T_HEAVYCAVALRY, TFConstants.T_PEASANTS, TFConstants.T_MILITIA, TFConstants.T_SCOUTER, TFConstants.T_ARCHER);
+
+		  	// "peasants", "militia", "scouter", "pikemen", "swordsmen", "archer",
+		  	// "carriage", "lightCavalry", "heavyCavalry", "ballista", "batteringRam", "catapult",
+       		var troopLoads:Array = new Array(0, 0, 200, 20, 5, 40, 30, 25, 5000, 100, 80, 35, 45, 75);
+		  	var speed:Number = 10000;
+		  	
+		  	for each (var type:int in types) {
+		  		total += bean[ troopIntNames[type] ] * troopLoads[type];
+		  	}
+		  	
+		  	return total * (1 + 0.1 * getTechLevel(TechConstants.LOAD_TECH));
 		}
 		
 		// return time from start to target field in seconds
@@ -5512,6 +5642,8 @@ package scripts.jobQueue.script
 					if (problem.search("This is the last city") == 0) {
 						setTimeout(endloyaltyattack, responseTime*1000);
 					} else if (loyalty != -1 && loyalty <= 7 && loyaltyAttackOnly) {
+						setTimeout(endloyaltyattack, responseTime*1000);
+					} else if (problem.search("You need further promotion") == 0) {
 						setTimeout(endloyaltyattack, responseTime*1000);
 					}
 				}
@@ -6010,7 +6142,10 @@ package scripts.jobQueue.script
 				if (str.indexOf("//") == 0) continue;
 
 				var args:Array = str.split(" ");
-				if (args.length != 2) {
+				if (args[0] == "npclist") {
+					args.splice(0, 1);
+					if (!npclist(args.join(" "))) good = false;
+				} else if (args.length != 2) {
 					good = false;
 					logMessage("Invalid line: " + str);
 				} else if (args[0] == "build") {
@@ -6036,6 +6171,24 @@ package scripts.jobQueue.script
 						good = false;
 					} else {
 						addFortificationsGoal(fr);
+					}
+				} else if (args[0] == "npctroop") {
+					if (!npctroops(args[1])) {
+						good = false;
+					}
+				} else if (args[0] == "npcheroes") {
+					npcheroes(args[1]);
+				} else if (args[0] == "npctroops") {
+					if (!npctroops(args[1])) {
+						good = false;
+					}					
+				} else if (args[0] == "valleytroops") {
+					if (!valleytroops(args[1])) {
+						good = false;
+					}
+				} else if (args[0] == "huntingpos") {
+					if (!huntingpos(args[1])) {
+						good = false;
 					}
 				} else {
 					logMessage("Error: " + args[0] + " must be either build, research, config, ballsused, troop, or fortification");
