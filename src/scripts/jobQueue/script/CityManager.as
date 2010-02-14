@@ -4225,7 +4225,7 @@ package scripts.jobQueue.script
 			var validCount:int = 0;
 
 			for (var ind:int = 0; ind < npcs.length; ind++) {
-				var fieldId:int = localNPCs[ind];
+				var fieldId:int = npcs[ind];
 
 				// evasionFieldId canot be used as training npc to avoid confusion (especially on restart)
 				if (training && fieldId == evasionFieldId) continue;
@@ -4272,7 +4272,7 @@ package scripts.jobQueue.script
 			}
 
 			if (getConfig(CONFIG_DEBUG) > 0) {
-				logMessage("number of local npc " + localNPCs.length + ", appropriate level/troop: " + validCount);
+				logMessage("number of local npc " + npcs.length + ", appropriate level/troop: " + validCount);
 			}
 
 			return false;
@@ -4989,7 +4989,7 @@ package scripts.jobQueue.script
 
 		public function npclist(str:String) : Boolean {
 			var arr:Array = str.toLowerCase().split(" ");
-			var error:Boolean = false;
+			var good:Boolean = true;
 			var any:Boolean = false;
 			
 			if (npcList == null) npcList = new Array();
@@ -4997,10 +4997,10 @@ package scripts.jobQueue.script
 				var fieldId:int = Map.coordStringToFieldId(locStr);
 				if (fieldId == -1) {
 					logMessage("Invalid location " + locStr);
-					error = true;
+					good = false;
 				} else if (npcList.indexOf(fieldId) != -1) {
 					logMessage("Repetitive location " + locStr);
-					error = true;
+					good = false;
 				} else {
 					npcList.push(fieldId);
 					any = true;
@@ -5008,9 +5008,9 @@ package scripts.jobQueue.script
 			}
 			if (!any) {
 				logMessage("No npc added from " + str);
-				error = true;
+				good = false;
 			}
-			return error;
+			return good;
 		}
 				
 		private var loyaltyAttackFieldId:int = -1;
