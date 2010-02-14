@@ -3614,8 +3614,8 @@ package scripts.jobQueue.script
 		}
 		
 		private function getTroopBeanForNPCLevel(level:int, wantResource:Boolean) : TroopBean {
-			if (level <= 0 || level > 5) return null;
 			if (npcTroopBean != null) return getPresetTroopBean(npcTroopBean);
+			if (level <= 0 || level > 5) return null;
 
 			var archery:int = getTechLevel(TechConstants.THROW_SKILL);
 			var hbr:int = getTechLevel(TechConstants.DRIVE_SKILL);
@@ -4230,9 +4230,11 @@ package scripts.jobQueue.script
 				// evasionFieldId canot be used as training npc to avoid confusion (especially on restart)
 				if (training && fieldId == evasionFieldId) continue;
 
-				var level:int = Map.getLevel(fieldId);
-				if (level > maxLevel || level < minLevel) continue;
-
+				if (npcList == null) {
+					var level:int = Map.getLevel(fieldId);
+					if (level > maxLevel || level < minLevel) continue;
+				}
+				
 				var type:int = Map.getType(fieldId);
 				if (type == -1) return false;	
 				if (type != FieldConstants.TYPE_NPC) {
@@ -4264,7 +4266,7 @@ package scripts.jobQueue.script
 				newArmy.troops = tr;
 				newArmy.resource = new ResourceBean();
 				
-				logMessage(((training) ? "train at " : "attack NPC ") + Map.fieldIdToString(fieldId) + " with hero " + heroToString(hero) + " and " + tr.ballista + " ballista, " + tr.carriage + " transports " +
+				logMessage(((training) ? "train at " : "attack NPC ") + Map.fieldIdToString(fieldId) + " with hero " + heroToString(hero) + " and " + troopBeanToString(newArmy.troops) +
 					Utils.formatTime(getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops)));
 				ActionFactory.getInstance().getArmyCommands().newArmy(castle.id, newArmy, handleArmyCommandResponse);				
 				Map.updateInfo(fieldId);
