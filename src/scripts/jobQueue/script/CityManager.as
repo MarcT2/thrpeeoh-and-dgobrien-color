@@ -1758,7 +1758,9 @@ package scripts.jobQueue.script
 			
 			if (getConfig(CONFIG_HERO) > 0 && heroUpdateNeeded) {
 				promotePoliticsChief();
-				ActionFactory.getInstance().getHeroCommand().getHerosListFromTavern(castle.id);
+				if (countBuilding(BuildingConstants.TYPE_TAVERN, 1) > 0) {
+					ActionFactory.getInstance().getHeroCommand().getHerosListFromTavern(castle.id);
+				}
 			}
 			
 			if (getConfig(CONFIG_TROOP) && countBuilding(BuildingConstants.TYPE_EMBASSY, 1) > 0) {
@@ -2271,7 +2273,9 @@ package scripts.jobQueue.script
 			}
 			
 			if (heroUpdateNeeded && getConfig(CONFIG_FASTHERO) > 0 && masterTimer.canSend(timeSlot)) {
-				ActionFactory.getInstance().getHeroCommand().getHerosListFromTavern(castle.id);
+				if (countBuilding(BuildingConstants.TYPE_TAVERN, 1) > 0) {
+					ActionFactory.getInstance().getHeroCommand().getHerosListFromTavern(castle.id);
+				}
 			}
 		}
 		
@@ -2807,7 +2811,7 @@ package scripts.jobQueue.script
 			
 			var oldProd:int = productionRate;
 			var hero:HeroBean = bestIdleAttackHero();
-			var factor:Number = 1 + hero.power / 100.0;
+			var factor:Number = (hero != null) ? 1 + hero.power / 100.0 : 1;
 			var reservedPeople:int = 200*factor;
 					
 			if (resource.workPeople + reservedPeople > resource.curPopulation && cityTimingAllowed("decreaserate", 60)) {
@@ -2928,7 +2932,7 @@ package scripts.jobQueue.script
 
 			var randOrder:Array = Utils.randOrder(buildings.length);
 			var hero:HeroBean = bestIdleAttackHero();
-			var factor:Number = 1 + (hero.power / 100.0);
+			var factor:Number = (hero != null) ? 1 + (hero.power / 100.0) : 1;
 			
 			for (var i:int = 0; i < randOrder.length; i++) {
 				building = buildings[ randOrder[i] ];
