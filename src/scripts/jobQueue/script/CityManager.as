@@ -481,6 +481,11 @@ package scripts.jobQueue.script
 				logMessage("WARNING: warreport works only on the first town " + player.castlesArray[0].name + ", option disabled");
 				configs[CONFIG_WARREPORT] = 0;
 			}
+
+			if (getConfig(CONFIG_TRADING) > 0 && countBuilding(BuildingConstants.TYPE_MARKET, 1) == 0) {
+				logMessage("WARNING: trading is on with NO MARKET IN TOWN");
+			}
+
 			return good;
 		}
 		
@@ -4037,6 +4042,22 @@ package scripts.jobQueue.script
 			buildCityLocation = -1;			
 		}
 		
+		public function idrecall(armyId:int) : void {
+			var army:ArmyBean;
+			for each (army in selfArmies) {
+				if (army.armyId == armyId && army.direction != ArmyConstants.ARMY_BACKWARD) {
+					logMessage("Recall own troop with  id: " + army.armyId);
+					ActionFactory.getInstance().getArmyCommands().callBackArmy(castle.id, army.armyId);
+				}
+			}
+			for each (army in friendlyArmies) {
+				if (army.armyId == armyId) {
+					logMessage("Recall friendly troop with  id: " + army.armyId);
+					ActionFactory.getInstance().getArmyCommands().callBackArmy(castle.id, army.armyId);
+				}
+			}
+		}
+		
 		private function sendTroopToBuildCity(fieldId:int) : Boolean {
 			var newArmy:NewArmyParam;
 			if (troop.peasants < 250 || resource.gold < 10000 || resource.food.amount < 10000 || resource.gold < 1000 || resource.wood.amount < 10000 || resource.stone.amount < 10000 || resource.iron.amount < 10000) return false;
@@ -4969,6 +4990,9 @@ package scripts.jobQueue.script
 			if (tr == null) {
 				logMessage("Invalid troop: " + str);
 				return false;
+			} else if (countTroop(tr) > 10000 * getBuildingLevel(BuildingConstants.TYPE_TRAINNING_FEILD)) {
+				logMessage("Too many npc troops for current rally spot level");
+				return false;
 			} else {
 				npcTroopBean = tr;
 				return true;
@@ -4979,6 +5003,9 @@ package scripts.jobQueue.script
 			var tr:TroopBean = CityState.getTroopsStatic(str);
 			if (tr == null) {
 				logMessage("Invalid troop: " + str);
+				return false;
+			} else if (countTroop(tr) > 10000 * getBuildingLevel(BuildingConstants.TYPE_TRAINNING_FEILD)) {
+				logMessage("Too many valley troops for current rally spot level");
 				return false;
 			} else {
 				valleyTroopBean = tr;

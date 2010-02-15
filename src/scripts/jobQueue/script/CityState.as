@@ -377,32 +377,7 @@ package scripts.jobQueue.script
 		public function idrecall(armyId:int) : void
 		{
 			currentAction = "herorecall";
-
-			var army:ArmyBean;
-			for each (army in currentAttacks) {
-				if (army.armyId == armyId) {
-					onCommandResult("Recall troop with  id: " + army.armyId);
-					ActionFactory.getInstance().getArmyCommands().callBackArmy(castle.id, army.armyId);
-				}
-			}
-			for each (army in currentTransports) {
-				if (army.armyId == armyId) {
-					onCommandResult("Recall troop with  id: " + army.armyId);
-					ActionFactory.getInstance().getArmyCommands().callBackArmy(castle.id, army.armyId);
-				}
-			}
-			for each (army in currentScouts) {
-				if (army.armyId == armyId) {
-					onCommandResult("Recall troop with  id: " + army.armyId);
-					ActionFactory.getInstance().getArmyCommands().callBackArmy(castle.id, army.armyId);
-				}
-			}
-			for each (army in currentReinforce) {
-				if (army.armyId == armyId) {
-					onCommandResult("Recall troop with  id: " + army.armyId);
-					ActionFactory.getInstance().getArmyCommands().callBackArmy(castle.id, army.armyId);
-				}
-			}
+			cityManager.idrecall(armyId);
 			onCommandFinished(true);
 		}
 
@@ -475,7 +450,7 @@ package scripts.jobQueue.script
 				if(h.name.toLowerCase() == name.toLowerCase())
 				{
 					validHero = true;
-					if (h.status == CityStateConstants.HERO_STATUS_IDLE || h.status == CityStateConstants.HERO_STATUS_MAYOR)
+					if (h.status == CityStateConstants.HERO_STATUS_CAPTIVE || h.status == CityStateConstants.HERO_STATUS_IDLE || h.status == CityStateConstants.HERO_STATUS_MAYOR)
 					{
 						hero = h;
 					}
@@ -484,13 +459,18 @@ package scripts.jobQueue.script
 			
 			if (hero != null)
 			{
-				if (hero.status == CityStateConstants.HERO_STATUS_MAYOR) {
-					ActionFactory.getInstance().getHeroCommand().dischargeChief(castle.id);
-				}
-            	setCommandResponse(ResponseDispatcher.HERO_FIRE_HERO, handleCommandResponse);
-            	onCommandResult("Firing hero " + name);
-            	ActionFactory.getInstance().getHeroCommand().fireHero(castle.id, hero.id);
-            	return;
+				if (hero.status == CityStateConstants.HERO_STATUS_CAPTIVE) {
+					setCommandResponse(ResponseDispatcher.HERO_RELEASE_HERO, handleCommandResponse);
+					ActionFactory.getInstance().getHeroCommand().releaseHero(castle.id, hero.id);
+				} else {
+					if (hero.status == CityStateConstants.HERO_STATUS_MAYOR) {
+						ActionFactory.getInstance().getHeroCommand().dischargeChief(castle.id);
+					}
+	            	setCommandResponse(ResponseDispatcher.HERO_FIRE_HERO, handleCommandResponse);
+	            	onCommandResult("Firing hero " + name);
+	            	ActionFactory.getInstance().getHeroCommand().fireHero(castle.id, hero.id);
+	            	return;
+	   			}
    			}
 			else
 			{
