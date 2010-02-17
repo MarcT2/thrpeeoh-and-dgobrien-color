@@ -15,10 +15,19 @@ package scripts.jobQueue.script
 		}
 		private static function initExternalItemNames() : void {
 			var xml:XMLDocument = dataXML.getXMLDoc("ItemEumDefine");
+			var countSameItemNames:Array = new Array();
+
 			externalItemNames = new Array();
 			for each(var node:XMLNode in xml.firstChild.nextSibling.childNodes) {
 				if (node.attributes.id == undefined || node.attributes.name == undefined) continue;
-				externalItemNames[Utils.trim(node.attributes.id)] = Utils.trim(node.attributes.name);
+				var name:String = Utils.trim(node.attributes.name);
+				if (countSameItemNames[name] == undefined) {
+					countSameItemNames[name] = 0;
+				} else {
+					countSameItemNames[name]++;
+					name = name + countSameItemNames[name]; 	// create a different name
+				}
+				externalItemNames[Utils.trim(node.attributes.id)] = name;
 			}
 		}
 		public static function getItemName(str:String) : String {

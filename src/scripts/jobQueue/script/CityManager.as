@@ -56,9 +56,6 @@ package scripts.jobQueue.script
 		private static var CONFIG_ABANDON:String = "abandon";
 		private static var CONFIG_WARREPORT:String = "warreport";
 
-		private static var medalNames:Array = new Array("", "Cross", "Rose", "Lion", "Honor",
-			"Courage", "Wisdom", "Freedom", "Justice", "Nation");
-
 		private static var resourceNames:Array = new Array("food", "lumber", "stone", "iron");
 		private static var troopIntNames:Array = new Array("", "",
 		  "peasants", "militia", "scouter", "pikemen", "swordsmen", "archer",
@@ -105,14 +102,15 @@ package scripts.jobQueue.script
 		// location information
 		private var resourceFieldType:int = FieldConstants.TYPE_FOREST;
 		private var resourceFieldsDetailInfo:ArrayCollection = new ArrayCollection(); // detail info for resource fields
-		private var flat5FieldsDetailInfo:ArrayCollection = new ArrayCollection(); // detail info for flat level 5 fields
+		private var flatFieldsDetailInfo:ArrayCollection = new ArrayCollection(); // detail info for flat level 5 fields
 		private var localFieldsDetailInfo:ArrayCollection = new ArrayCollection(); // detail info for local fields
 		private var evasionFieldId:int = -1;
 		
 		private var localNPCs:Array = null;	// list of local npcs
+		private var localNPC10s:Array = null;	// list of local npcs
 		private var candidateResourceFields:Array = null;	// list of resource fields to be checked
 		private var candidateLocalFields:Array = null;	// list of local fields to be checked
-		private var candidateFlat5Fields:Array = null;	// list of local fields to be checked
+		private var candidateFlatFields:Array = null;	// list of local fields to be checked
 
 
 		// state of the castle
@@ -153,11 +151,18 @@ package scripts.jobQueue.script
 		private var fortificationsRequirements:ArrayCollection = new ArrayCollection();
 		
 		// other customizations
+		private var npcList:Array = null;
 		private var npcHeroes:Array = null;
 		private var npcTroopBean:TroopBean = null;
-		private var npcList:Array = null;
+		private var npc10List:Array = null;
+		private var npc10Heroes:Array = null;
+		private var npc10TroopBean:TroopBean = null;
+		private var npc10LimitTroopBean:TroopBean = null;
 		private var valleyTroopBean:TroopBean = null;
 		private var huntingLocation:int = -1;
+		private var trainingHeroName:String = null;
+		private var trainingHeroNextStop:int = -1;
+		private var trainingHeroNeeded:Boolean = true;
 		
 		private function errorCaught(errorMsg:String) : void {
 			logMessage("Error: " + errorMsg);
@@ -256,7 +261,6 @@ package scripts.jobQueue.script
 			ResponseDispatcher.getInstance().addEventListener(ResponseDispatcher.TRADE_GET_TRANSING_TRADE_LIST, handleGetTransingTradeListResponse);
 			ResponseDispatcher.getInstance().addEventListener(ResponseDispatcher.TRADE_NEW_TRADE, handleTradeResponse);
 			ResponseDispatcher.getInstance().addEventListener(ResponseDispatcher.TRADE_CANCEL_TRADE, handleCancelTradeResponse);
-
 		}
 
 		public function getHeroes() : ArrayCollection {
@@ -296,17 +300,12 @@ package scripts.jobQueue.script
 
 				if (item.id.indexOf("hero.loyalty.") == 0) {
 					var type:int = int(item.id.substr(13));
-					if (type <= 0 || type >= medalNames.length) {
-						logMessage("Unknown medal " + item.id + ": " + item.count);
+					if (first) {
+						first = false;
 					} else {
-						if (first) {
-							first = false;
-						} else {
-							str += ", ";
-						}
-						// str += item.count + " " + medalNames[type];
-						str += item.count + " " + Items.getItemName(item.id);
+						str += ", ";
 					}
+					str += item.count + " " + Items.getItemName(item.id);
 				}
 			}
 			if (str != "") 
@@ -331,13 +330,14 @@ package scripts.jobQueue.script
 		}	
 		private function resetMap() : void {
 			resourceFieldsDetailInfo = new ArrayCollection();
-			flat5FieldsDetailInfo = new ArrayCollection();
+			flatFieldsDetailInfo = new ArrayCollection();
 			localFieldsDetailInfo = new ArrayCollection();
 			
 			localNPCs = null;
+			localNPC10s = null;
 			candidateResourceFields = null;
 			candidateLocalFields = null; 
-			candidateFlat5Fields = null; 			
+			candidateFlatFields = null; 			
 		}
 		
 		private function testFunction() : void {
@@ -447,7 +447,12 @@ package scripts.jobQueue.script
 			for each (var args:String in arr) {
 				var subarr:Array = args.split(":");
 				if (configNames.indexOf(subarr[0]) != -1) {
-					configs[subarr[0]] = Number(subarr[1]);
+					if (Utils.isNumeric(subarr[1])) {
+						configs[subarr[0]] = Number(subarr[1]);
+					} else {
+						logError("Invalid numeric value for " + subarr[0] + ": " + subarr[1]);
+						good = false;						
+					}
 				} else {
 					logError("Invalid config name: " + subarr[0] + ", available: " + configNames.join(" "));
 					good = false;
@@ -473,7 +478,7 @@ package scripts.jobQueue.script
 			}
 			
 			if (getConfig(CONFIG_FASTHERO) > 0 && getConfig(CONFIG_HERO) <= 1) {
-				logMessage("WARNING: missing or inadequate hero option, fasthero option disabled");
+				logMessage("WARNING: do not use fasthero with incorrect hero option!!!");
 				configs[CONFIG_FASTHERO] = 0;
 			}
 			
@@ -485,7 +490,16 @@ package scripts.jobQueue.script
 			if (getConfig(CONFIG_TRADING) > 0 && countBuilding(BuildingConstants.TYPE_MARKET, 1) == 0) {
 				logMessage("WARNING: trading is on with NO MARKET IN TOWN");
 			}
-
+			
+			if (getConfig(CONFIG_HERO) > 1 && countBuilding(BuildingConstants.TYPE_TAVERN, 1) == 0) {
+				logMessage("WARNING: hero selection is on with NO INN IN TOWN");
+			}
+			
+			if (getConfig(CONFIG_NPC) < 0 || getConfig(CONFIG_NPC) > 5) {
+				configs[CONFIG_NPC] = 0;
+				logMessage("WARNING: invalid npc option, npc option disabled");
+			}
+				
 			return good;
 		}
 		
@@ -498,9 +512,15 @@ package scripts.jobQueue.script
 			
 			npcHeroes = null;
 			npcTroopBean = null;
-			npcList = null;			
+			npcList = null;		
+			npc10Heroes = null;
+			npc10TroopBean = null;
+			npc10List = null;
+			npc10LimitTroopBean = null;	
 			valleyTroopBean = null;
 			huntingLocation = -1;
+			trainingHeroName = null;
+			trainingHeroNeeded = true;
 		}
 		
 		public function addTroopGoal(troopRequirement:TroopBean) : void {
@@ -606,7 +626,12 @@ package scripts.jobQueue.script
 			}
 
 			if (getConfig(CONFIG_HERO) > 0) uplevelHeros();
-			if (getConfig(CONFIG_DUMPING) > 0) handleDumpingResource();
+			if (getConfig(CONFIG_DUMPING) > 0) {
+				trainingHeroNeeded = handleDumpingResource();
+			} else {
+				trainingHeroNeeded = false;
+			}
+			
 
 			if (getConfig(CONFIG_NPC) > 0) handleSearchNPCs();
 			if (getConfig(CONFIG_VALLEY) > 0) {
@@ -621,8 +646,11 @@ package scripts.jobQueue.script
 			var attacked:Boolean = false;			
 			var ready:Boolean = marketReady();
 			
+			if (!attacked && trainingHeroNextStop != -1) attacked = moveTrainingHero();
 			if (!attacked && buildCityLocation != -1 && castle.fieldId == buildCityFrom) attacked = handleBuildCity();
 			if (!attacked && getConfig(CONFIG_BUILDNPC) > 0) attacked = handleBuildNPC();
+			if (!attacked) attacked = handleAttackNPC10();
+			
 			if (ready && !attacked && getConfig(CONFIG_NPC) > 0) attacked = handleAttackNPCForResource();
 			if (!attacked && getConfig(CONFIG_VALLEY) > 0) attacked = handleAttackResourceFields();
 			if (!attacked && getConfig(CONFIG_HUNTING) > 0) attacked = handleAttackLocalFields();
@@ -681,7 +709,7 @@ package scripts.jobQueue.script
 				
 				updateUpgradeConditions();
 				searchUnoccupiedResourceFields();
-				searchUnoccupiedFlat5Fields();
+				searchUnoccupiedFlatFields();
 				searchUnoccupiedLocalFields();
 				if (evasionFieldId == -1) findEvasionFieldId();
 			} catch(error:Error) {
@@ -1238,7 +1266,7 @@ package scripts.jobQueue.script
 
 		private function futureTechGoal() : ConditionBean {
 			var res:AvailableResearchListBean = getActiveResearch();
-			if (res != null && res.endTime - (new Date()).getTime() > 3*3600*1000) return null;
+			if (res != null && res.endTime - Utils.getServerTime() > 3*3600*1000) return null;
 			
 			var bestCondBean:ConditionBean = null;
 			var bestValue:int = 100000000;
@@ -1265,7 +1293,7 @@ package scripts.jobQueue.script
 
 		private function futureTechCondition() : CityCondition {
 			var res:AvailableResearchListBean = getActiveResearch();
-			if (res != null && res.endTime - (new Date()).getTime() > 3*3600*1000) return null;
+			if (res != null && res.endTime - Utils.getServerTime() > 3*3600*1000) return null;
 			var bestCond:CityCondition = null;
 			var bestValue:int = 100000000;
 			
@@ -1291,7 +1319,7 @@ package scripts.jobQueue.script
 
 		private function futureBuildingGoal() : ConditionBean {
 			var building:BuildingBean = getActiveBuilding();
-			if (building != null && building.endTime - (new Date()).getTime() > 3*3600*1000) return null;
+			if (building != null && building.endTime - Utils.getServerTime() > 3*3600*1000) return null;
 			var bestCondBean:ConditionBean = null;
 			var bestValue:int = 100000000;
 			
@@ -1322,7 +1350,7 @@ package scripts.jobQueue.script
 		
 		private function futureBuildingCondition() : CityCondition {
 			var building:BuildingBean = getActiveBuilding();
-			if (building != null && building.endTime - (new Date()).getTime() > 3*3600*1000) return null;
+			if (building != null && building.endTime - Utils.getServerTime() > 3*3600*1000) return null;
 			
 			var bestCond:CityCondition = null;
 			var bestValue:int = 100000000;
@@ -1350,12 +1378,12 @@ package scripts.jobQueue.script
 		}
 		
 		private function isUnderBP() : Boolean {
-			var curr:Number = (new Date()).getTime();
+			var curr:Number = Utils.getServerTime();
 			return (curr-player.playerInfo.createrTime)/1000 < 7.5*24*3600 && countBuilding(BuildingConstants.TYPE_TOWN_HALL, 5) < 1;
 		}
 		
 		private function remainTime(end:Number) : String {
-			var curr:Number = (new Date()).getTime();
+			var curr:Number = Utils.getServerTime();
 			if (end < curr) return "0m:00";
 			return Utils.formatTime((end-curr) / 1000);
 		}
@@ -1384,8 +1412,8 @@ package scripts.jobQueue.script
 			}
 		}
 
-		private function promoteAttackChief() : void {
-			var best:HeroBean = bestIdleAttackHero();
+		private function promoteAttackChief(hero:HeroBean = null) : void {
+			var best:HeroBean = (hero != null) ? hero : bestIdleAttackHero();
 			if (best == null) return;
 			if (best.status == CityStateConstants.HERO_STATUS_IDLE) {
 				if (promoteAllowed(best.id)) {
@@ -1812,6 +1840,10 @@ package scripts.jobQueue.script
 					heroes[i] = response.hero;
 					return;
 				}
+				// if a training hero returns to town, assume training is needed first
+				if (response.hero.status == HeroConstants.HERO_FREE_STATU && trainingHeroName != null && response.hero.name.toLowerCase() == trainingHeroName.toLowerCase()) {
+					trainingHeroNeeded = true;
+				}		
 			} else if (response.updateType == 0) {
 				trace("add hero: " + heroToString(response.hero));
 				for (i = 0; i < heroes.length; i++) {
@@ -1830,6 +1862,9 @@ package scripts.jobQueue.script
 						logMessage("Auto release bad captured hero " + heroToString(response.hero));
 						ActionFactory.getInstance().getHeroCommand().releaseHero(castle.id, response.hero.id);
 					}
+				} else if (trainingHeroName != null && response.hero.name.toLowerCase() == trainingHeroName.toLowerCase()) {
+					// if a training hero arrives at a town, assume training is needed first
+					trainingHeroNeeded = true;
 				}
 			} else if (response.updateType == 1) {
 				trace("remove hero: " + heroToString(response.hero));		
@@ -1969,13 +2004,29 @@ package scripts.jobQueue.script
 
 		private function bestHero(key:String) : HeroBean {
 			var best:HeroBean = null;
-			var bestValue:int = 0;
 			for each (var curr:HeroBean in heroes) {
-				var keyValue:int = curr[key] + curr.remainPoint;
-				if (bestValue < keyValue ||
-					(best != null && bestValue == keyValue && curr.level > best.level)) {
+				if (best == null) {
 					best = curr;
-					bestValue = keyValue;					
+					continue;
+				}
+				
+				if (best[key] + best.remainPoint > curr[key] + curr.remainPoint) continue;
+				if (best[key] + best.remainPoint < curr[key] + curr.remainPoint) { // high key is good
+					best = curr;
+					continue;
+				}
+				
+				if (best.level < curr.level) continue;
+				if (best.level > curr.level) { // low level is good
+					best = curr;
+					continue;
+				}
+				
+				// WANTED: strong ordering among heroes
+				// main stats are the same, break tie using id
+				if (best.id > curr.id) {  // low id is good
+					curr = best;
+					continue;
 				}
 			}
 			return best;
@@ -1983,14 +2034,31 @@ package scripts.jobQueue.script
 		
 		private function bestIdleHero(key:String) : HeroBean {
 			var best:HeroBean = null;
-			var bestValue:int = 0;
 			for each (var curr:HeroBean in heroes) {
 				if (curr.status != HeroConstants.HERO_FREE_STATU && curr.status != HeroConstants.HERO_CHIEF_STATU) continue;
-				var keyValue:int = curr[key] + curr.remainPoint;
-				if (bestValue < keyValue ||
-					(best != null && bestValue == keyValue && curr.level > best.level)) {
+
+				if (best == null) {
 					best = curr;
-					bestValue = keyValue;					
+					continue;
+				}
+				
+				if (best[key] + best.remainPoint > curr[key] + curr.remainPoint) continue;
+				if (best[key] + best.remainPoint < curr[key] + curr.remainPoint) { // high key is good
+					best = curr;
+					continue;
+				}
+				
+				if (best.level < curr.level) continue;
+				if (best.level > curr.level) { // low level is good
+					best = curr;
+					continue;
+				}
+				
+				// WANTED: strong ordering among heroes
+				// main stats are the same, break tie using id
+				if (best.id > curr.id) {  // low id is good
+					curr = best;
+					continue;
 				}
 			}
 			return best;
@@ -2082,11 +2150,12 @@ package scripts.jobQueue.script
 		// use for exterior tasks
 		// select a hero with the most attack value
 		// leave the best or second best hero for defense in case of attack (or scout)
-		private function bestHeroForExtTasks() : HeroBean {		
+		private function bestHeroForExtTasks() : HeroBean {		 
 			var iBestAttack:HeroBean = bestIdleAttackHeroExcept(getMayor());
 			
 			// town is not fully developed, let's not be too choosy
-			if (heroes.length <= 5) return iBestAttack;
+			if (heroes.length <= 5) return iBestAttack;			
+			var trainingHero:HeroBean = (trainingHeroNeeded) ? getTrainingHero() : null;
 			
 			var bestAttack:HeroBean = bestAttackHero();
 			var avoided:HeroBean;			
@@ -2104,7 +2173,7 @@ package scripts.jobQueue.script
 			var best:HeroBean = null;
 			var bestValue:int = 0;
 			for each (var curr:HeroBean in heroes) {
-				if (curr == avoided || curr == avoided2 || curr == avoided3) continue;
+				if (curr == avoided || curr == avoided2 || curr == avoided3 || curr == trainingHero) continue;
 
 				if (curr.status != HeroConstants.HERO_FREE_STATU) continue;
 				if (bestValue < curr.power ||
@@ -2117,8 +2186,11 @@ package scripts.jobQueue.script
 		}
 
 		private function getHeroForNPCFromList(arr:Array) : HeroBean {
+			var trainingHero:HeroBean = (trainingHeroNeeded) ? getTrainingHero() : null;
+
 			for each(var hero:HeroBean in heroes) {
 				if (hero.status != HeroConstants.HERO_FREE_STATU) continue;
+				if (hero == trainingHero) continue;
 				for each(var heroName:String in arr) {
 					if (hero.name.toLowerCase() == heroName.toLowerCase()) return hero;
 				}
@@ -2127,23 +2199,24 @@ package scripts.jobQueue.script
 		}
 
 		// select a hero for training
-		private function getHeroForNPC() : HeroBean {
+		private function getHeroForNPC() : HeroBean { 
 			if (npcHeroes != null) return getHeroForNPCFromList(npcHeroes);
 			
 			var config:int = getConfig(CONFIG_HERO);
 			var pBest:HeroBean = bestPoliticsHero();
 			var iBest:HeroBean = (getConfig(CONFIG_RESEARCH) > 0 && getConfig(CONFIG_HERO) % 10 > 0) ? bestIntelHero() : null;
-			
+			var trainingHero:HeroBean = (trainingHeroNextStop != -1) ? getTrainingHero() : null;
+
 			var best:HeroBean = null;
 			if (config/10 >= 2) {
 				// try to train politic hero first
 				best = bestPoliticsBaseHeroExcept(pBest);
-				if (best.status == HeroConstants.HERO_FREE_STATU) return best;
+				if (best != trainingHero && best.status == HeroConstants.HERO_FREE_STATU) return best;
 			}
 			
 			if (config % 10 >= 2) {
 				best = bestIntelBaseHeroExcept(iBest);
-				if (best.status == HeroConstants.HERO_FREE_STATU) return best;				
+				if (best != trainingHero && best.status == HeroConstants.HERO_FREE_STATU) return best;				
 			}
 
 			// the mayor is considered "idle" ...
@@ -2169,7 +2242,7 @@ package scripts.jobQueue.script
 			var bestBaseAttack:HeroBean = null;
 			var bestScore:int = 1000000000;
 			for each (var curr:HeroBean in heroes) {
-				if (curr == avoided || curr == avoided2 || curr == avoided3) continue;
+				if (curr == avoided || curr == avoided2 || curr == avoided3 || curr == trainingHero) continue;
 				if (curr.status != HeroConstants.HERO_FREE_STATU) continue;
 				var score:int = rankingScore(curr.level, curr.power + curr.remainPoint);
 				if (score < bestScore) {
@@ -2178,6 +2251,15 @@ package scripts.jobQueue.script
 				}
 			}
 			return bestBaseAttack;
+		}
+
+		private function getHeroForNPC10() : HeroBean {
+			if (npc10Heroes != null) return getHeroForNPCFromList(npc10Heroes);
+			var trainingHero:HeroBean = (trainingHeroNeeded) ? getTrainingHero() : null;			
+			var bestAttack:HeroBean = bestAttackHero();
+			if (trainingHero == bestAttack) return null;
+			if (bestAttack.status == HeroConstants.HERO_FREE_STATU) return bestAttack;
+			return null;
 		}
 		
 		private function worstAttackBaseHero() : HeroBean {
@@ -2250,8 +2332,12 @@ package scripts.jobQueue.script
 
 		private function getReservedHeroes() : ArrayCollection {
 			var arr:ArrayCollection = new ArrayCollection();
-			var conf:int = getConfig(CONFIG_HERO);
+			if (trainingHeroNeeded) {
+				var trainingHero:HeroBean = getTrainingHero();
+				if (trainingHero != null) arr.addItem(trainingHero);
+			}
 			
+			var conf:int = getConfig(CONFIG_HERO);
 			if (conf == 1) return arr;
 			var pHero:HeroBean = bestPoliticsHero();
 			var iHero:HeroBean = bestIntelHero();
@@ -2284,13 +2370,46 @@ package scripts.jobQueue.script
 			}
 		}
 		
+		private function isTrainingHeroPresent() : Boolean {
+			if (trainingHeroName == null) return true;	// any hero can be used to train troops
+			for each(var hero:HeroBean in heroes) {
+				if (hero.name.toLowerCase() == trainingHeroName.toLowerCase()) return true;
+			}
+			return false;
+		}
+
+		private function getTrainingHero() : HeroBean {
+			var hero:HeroBean;
+			
+			if (trainingHeroName == null) {
+				hero = bestIdleAttackHero();
+				if (hero == null) return null;			// no hero available
+				if (heroes.length <= 5) return hero; 	// let's not be too choosy
+				
+				// bestAttackHero uses strong ranking, which is not what we want
+				var bestHero:HeroBean = bestAttackHero();	// bestHero should not be null given that hero != null
+				if (hero.power == bestHero.power) return hero;
+				return null;
+			}
+			
+			for each(hero in heroes) {
+				if (hero.name.toLowerCase() == trainingHeroName.toLowerCase()) {
+					if (hero.status == HeroConstants.HERO_CHIEF_STATU || hero.status == HeroConstants.HERO_FREE_STATU) return hero;
+					return null;
+				}
+			}
+			return null;
+		}
+		
 		private function attemptToHire(hero:HeroBean) : Boolean {
 			var mansionLevel:int = getBuildingLevel(BuildingConstants.TYPE_HEROS_MANSION);
 			if (mansionLevel == 0) return false;
+			var extra:int = (isTrainingHeroPresent()) ? 0 : 1;
+			
 			var fastLevelDesired:int = getConfig(CONFIG_FASTHERO);
 			if (resource.gold < 1000*hero.level) return false;
 
-			if (countBuilding(BuildingConstants.TYPE_HEROS_MANSION, heroes.length+1) > 0) {
+			if (mansionLevel > heroes.length + extra) {
 				if (hero.power >= 30 || fastLevelDesired > 0) {
 					logMessage("hiring new hero " + heroToString(hero));
 					ActionFactory.getInstance().getHeroCommand().hireHero(castle.id, hero.name);
@@ -2809,8 +2928,15 @@ package scripts.jobQueue.script
 		private var productionRate:int = -1;
 		private function adjustIdlePeopleAvailable() : void {
 			if (productionRate == -1) {
-				productionRate = 100;
+				productionRate = 50;
 				ActionFactory.getInstance().getInteriorCommands().modifyCommenceRate(castle.id, productionRate, productionRate, productionRate, productionRate)
+				return;
+			}
+			
+			if (trainingHeroNeeded && productionRate != 5) {
+				productionRate = 5;
+				logMessage("set production rate: " + productionRate);
+				ActionFactory.getInstance().getInteriorCommands().modifyCommenceRate(castle.id, productionRate, productionRate, productionRate, productionRate);			
 				return;
 			}
 			
@@ -2818,7 +2944,7 @@ package scripts.jobQueue.script
 			var hero:HeroBean = bestIdleAttackHero();
 			var factor:Number = (hero != null) ? 1 + hero.power / 100.0 : 1;
 			var reservedPeople:int = 200*factor;
-					
+
 			if (resource.workPeople + reservedPeople > resource.curPopulation && cityTimingAllowed("decreaserate", 60)) {
 				productionRate = productionRate * resource.curPopulation / (resource.workPeople + reservedPeople);
 				productionRate = int(productionRate/5) * 5;
@@ -2989,13 +3115,57 @@ package scripts.jobQueue.script
 			}
 			return null;
 		}
+
+		private function canUseSparedResourceForOffense() : Boolean {
+			var totalTroop:TroopBean = getAvailableTroop();
+			var reservedBarrack:BuildingBean = getReservedBarrack();
+			
+			// add troop from production queue to totalTroop
+			for each(var allProduceBean:AllProduceBean in troopProduceQueue) {
+				for each(var produceBean:ProduceBean in allProduceBean.allProduceQueueArray) {
+					totalTroop[ troopIntNames[produceBean.type] ] += produceBean.num;
+				}
+			}
+						
+			var trainLevel:int = getTechLevel(TechConstants.TRAIN_SKILL);
+			var types:Array = new Array(TFConstants.T_BALLISTA, TFConstants.T_CARRIAGE, TFConstants.T_SWORDSMEN, TFConstants.T_PIKEMAN, TFConstants.T_LIGHTCAVALRY, TFConstants.T_HEAVYCAVALRY, TFConstants.T_PEASANTS, TFConstants.T_MILITIA, TFConstants.T_SCOUTER, TFConstants.T_ARCHER, TFConstants.T_BATTERINGRAM, TFConstants.T_CATAPULT);
+			var times:Array = new Array(3000, 1000, 225, 150, 500, 1500, 50, 25, 100, 350, 4500);	// time required
+			var pops:Array = new Array(5, 4, 1, 1, 3, 6, 1, 1, 1, 2, 10); 	// population required
+			var factor:Number = getConfig(CONFIG_DUMPING);
+			if (factor < 1) factor = 1;
+
+			for each (var type:int in types) {
+				if (totalTroop[ troopIntNames[type] ] >= troopRequirement[ troopIntNames[type] ]) continue;
+
+				for (var i:int = 0; i < buildings.length; i++) {
+					var building:BuildingBean = buildings[ i ];
+					if (building.typeId != BuildingConstants.TYPE_BARRACK) continue;
+					if (building == reservedBarrack) continue;
+					var barrackBean:AllProduceBean = getTroopQueueForBuilding(building);
+					if (barrackBean == null || barrackBean.allProduceQueueArray.length + 1 >= building.level) continue; // do not use full production queue
+
+					var ind:int = types.indexOf(type);
+					var pop:int = pops[ind];
+					var maxBatch:int = factor * 6 * 3600 / times[ind] * (10+trainLevel) / 10;
+					var minBatch:int = int(maxBatch/10) * 10 / 6;
+					
+					if (canProduceTroop(type, building.level, minBatch) && resource.workPeople + pop*minBatch <= resource.curPopulation) return true;
+				}
+			}
+			return false;
+		}
 		
 		private function useSparedResourceForOffense() : Boolean {
 			if (troopRequirement == null) return false;
 			if (getConfig(CONFIG_DUMPING) <= 0) return false;
 			if (troopProduceQueue == null) return false;
 			if (getConfig(CONFIG_TROOP) <= 0) return false;
+
+			var bestHero:HeroBean = getTrainingHero();
+			if (bestHero == null) return false;
 			
+			adjustIdlePeopleAvailable();
+
 			var trainLevel:int = getTechLevel(TechConstants.TRAIN_SKILL);
 			var townhallLevel:int = getBuildingLevel(BuildingConstants.TYPE_TOWN_HALL);
 			var totalTroop:TroopBean = getAvailableTroop();
@@ -3012,7 +3182,6 @@ package scripts.jobQueue.script
 			var times:Array = new Array(3000, 1000, 225, 150, 500, 1500, 50, 25, 100, 350, 4500);	// time required
 			var pops:Array = new Array(5, 4, 1, 1, 3, 6, 1, 1, 1, 2, 10); 	// population required
 			var factor:Number = getConfig(CONFIG_DUMPING);
-			if (factor < 1) factor = 1;
 		
 			for each (var type:int in types) {
 				if (totalTroop[ troopIntNames[type] ] >= troopRequirement[ troopIntNames[type] ]) continue;
@@ -3033,20 +3202,21 @@ package scripts.jobQueue.script
 					var batch:int = 0;	
 					while (canProduceTroop(type, building.level, batch + 10) && resource.workPeople + pop*(batch+10) <= resource.curPopulation) batch += 10;
 
-					batch = batch / 2; 		// don't use all resources
-					if (batch > maxBatch) batch = maxBatch; 	// don't take too long to handle the batch
-					
 					if (batch > troopRequirement[ troopIntNames[type] ] - totalTroop[ troopIntNames[type] ]) {
 						batch = troopRequirement[ troopIntNames[type] ] - totalTroop[ troopIntNames[type] ];
 					}
 
 					if (batch <= maxBatch / 6) continue;
-
 					if ((type == TFConstants.T_BALLISTA || type == TFConstants.T_CARRIAGE) && batch > 100) batch = 100;
 					
-					promoteAttackChief();
-					logMessage("Use spare resource for " + batch + " " + troopExtNames[type] + " on barrack at " + building.positionId);
-					ActionFactory.getInstance().getTroopCommands().produceTroop(castle.id, building.positionId, type, batch, false, false);			
+					promoteAttackChief(bestHero);
+					for (var j:int = barrackBean.allProduceQueueArray.length; j < building.level; j++) {
+						var amount:int = Math.min(batch, maxBatch);
+						logMessage("Use spare resource for " + amount + " " + troopExtNames[type] + " on barrack at " + building.positionId);
+						ActionFactory.getInstance().getTroopCommands().produceTroop(castle.id, building.positionId, type, amount, false, false);			
+						batch = batch - amount;
+						if (batch <= 0) break;
+					}
 					promotePoliticsChief();
 					return true;
 				}
@@ -3351,7 +3521,7 @@ package scripts.jobQueue.script
 		}
 
 		private function handleSearchNPCs() : void {
-			if (localNPCs != null) return;
+			if (localNPCs != null && localNPC10s != null) return;
 			var r:int = 15;
 			var cx:int = Map.getX(castle.fieldId);
 			var cy:int = Map.getY(castle.fieldId);
@@ -3359,16 +3529,22 @@ package scripts.jobQueue.script
 			if (!Map.isMapReady(cx, cy, r)) return;
 		
 			localNPCs = new Array();
+			localNPC10s = new Array();
 			
 			for (var x:int = cx - r; x <= cx + r; x++) {
 				for (var y:int = cy - r; y <= cy + r; y++) {
 					if ((x-cx)*(x-cx) + (y-cy)*(y-cy) > r*r) continue;
 					var fieldId:int = Map.getFieldId(x, y);
-					if (Map.getType(fieldId) == FieldConstants.TYPE_NPC && Map.getLevel(fieldId) <= 5) localNPCs.push(fieldId);
+					if (Map.getType(fieldId) != FieldConstants.TYPE_NPC) continue;
+					
+					var level:int = Map.getLevel(fieldId);
+					if (level <= 5) localNPCs.push(fieldId);
+					if (level == 10) localNPC10s.push(fieldId);
 				}
 			}
 
 			localNPCs.sort(compareByLocalFieldPriority);
+			localNPC10s.sort(compareByLocalFieldPriority);
 		}
 		
 		private function findEvasionFieldId() : void {
@@ -3403,6 +3579,7 @@ package scripts.jobQueue.script
 		}
 
 		private var lastSearchHuntingLevel:int = -1;
+		private var lastSearchFlatLevel:int = -1;
 		private function handleSearchLocalFields() : void {
 			var r:int = 15;
 			var cx:int = Map.getX(castle.fieldId);
@@ -3410,15 +3587,17 @@ package scripts.jobQueue.script
 			
 			if (!Map.isMapReady(cx, cy, r)) return;
 			
-			if (candidateFlat5Fields != null && candidateLocalFields != null) {
-				if (lastSearchHuntingLevel == getConfig(CONFIG_HUNTING)) return;
+			if (candidateFlatFields != null && candidateLocalFields != null) {
+				if (lastSearchHuntingLevel == getConfig(CONFIG_HUNTING) && lastSearchFlatLevel == getConfig(CONFIG_BUILDNPC)) return;
 			}
 		
 			lastSearchHuntingLevel = getConfig(CONFIG_HUNTING);
+			lastSearchFlatLevel = getConfig(CONFIG_BUILDNPC);
+			
 			candidateLocalFields = new Array();
-			candidateFlat5Fields = new Array();
+			candidateFlatFields = new Array();
 			localFieldsDetailInfo.removeAll();
-			flat5FieldsDetailInfo.removeAll();
+			flatFieldsDetailInfo.removeAll();
 			
 			var minLevel:int;
 			var maxLevel:int;
@@ -3441,14 +3620,15 @@ package scripts.jobQueue.script
 				maxLevel = 10;
 			}
 			
+			var flatLevel:int = getBuildNPCLevel();
 			for (var x:int = cx - r; x <= cx + r; x++) {
 				for (var y:int = cy - r; y <= cy + r; y++) {
 					if ((x-cx)*(x-cx) + (y-cy)*(y-cy) > r*r) continue;
 					var fieldId:int = Map.getFieldId(x, y);
 					var fieldType:int = Map.getType(fieldId);
 					var fieldLevel:int = Map.getLevel(fieldId);
-						if (fieldLevel == 5 && fieldType == FieldConstants.TYPE_FLAT && Map.fieldDistance(fieldId, castle.fieldId) <= 10) {
-							candidateFlat5Fields.push(fieldId);
+						if (fieldLevel == flatLevel && fieldType == FieldConstants.TYPE_FLAT && Map.fieldDistance(fieldId, castle.fieldId) <= 10) {
+							candidateFlatFields.push(fieldId);
 						} else if (fieldLevel >= minLevel && fieldLevel <= maxLevel && fieldType <= FieldConstants.TYPE_FLAT) {
 							candidateLocalFields.push(fieldId);
 						}
@@ -3462,7 +3642,7 @@ package scripts.jobQueue.script
 			}
 		
 			candidateLocalFields.sort(compareByLocalFieldPriority);
-			candidateFlat5Fields.sort(compareByLocalFieldPriority);
+			candidateFlatFields.sort(compareByLocalFieldPriority);
 		}
 
 		private var lastSearchResourceLevel:int = -1;
@@ -3493,7 +3673,7 @@ package scripts.jobQueue.script
 					var fieldType:int = Map.getType(fieldId);
 					var fieldLevel:int = Map.getLevel(fieldId);
 
-					if (searchResource && fieldType == resourceFieldType && fieldLevel <= desiredLevel) {
+					if (searchResource && fieldType == resourceFieldType && fieldLevel == desiredLevel) {
 						trace("Resource field: " + Map.fieldIdToString(fieldId));
 					 	candidate.push(fieldId);
 					}
@@ -3533,26 +3713,26 @@ package scripts.jobQueue.script
 
 		}
 
-		private function searchUnoccupiedFlat5Fields() : void {
+		private function searchUnoccupiedFlatFields() : void {
 			var max:int = 30;
 
 			if (getConfig(CONFIG_BUILDNPC) <= 0) return;
-			if (candidateFlat5Fields == null || candidateFlat5Fields.length == 0) return;		// search has not begun or search has finished
-			if (flat5FieldsDetailInfo != null && flat5FieldsDetailInfo.length >= max) return;
+			if (candidateFlatFields == null || candidateFlatFields.length == 0) return;		// search has not begun or search has finished
+			if (flatFieldsDetailInfo != null && flatFieldsDetailInfo.length >= max) return;
 
-			for (var i:int = 0; i < candidateFlat5Fields.length; i++) {
-				var fieldId:int = candidateFlat5Fields[i];
+			for (var i:int = 0; i < candidateFlatFields.length; i++) {
+				var fieldId:int = candidateFlatFields[i];
 				var bean:MapCastleBean = Map.getDetailInfo(fieldId);
 				
 				if (bean == null) {
 					return;
 				} else {
-					if (bean.userName == null) flat5FieldsDetailInfo.addItem(bean);
-					candidateFlat5Fields.splice(i, 1);
+					if (bean.userName == null) flatFieldsDetailInfo.addItem(bean);
+					candidateFlatFields.splice(i, 1);
 					i--;
 				}
 				
-				if (flat5FieldsDetailInfo.length >= max) return;
+				if (flatFieldsDetailInfo.length >= max) return;
 			}
 		}
 		
@@ -3612,18 +3792,13 @@ package scripts.jobQueue.script
 				if (army.startFieldId == castle.fieldId && fieldId == army.targetFieldId) count++;
 			}
 			return count;
-		}		
-		
-		private function getPresetTroopBean(tr:TroopBean) : TroopBean {
-			var trObject:Object = tr.toObject();
-			for (var key:String in trObject) {
-				if (tr[key] > troop[key]) return null;
-			}
-			return tr;
 		}
 		
 		private function getTroopBeanForNPCLevel(level:int, wantResource:Boolean) : TroopBean {
-			if (npcTroopBean != null) return getPresetTroopBean(npcTroopBean);
+			if (npcTroopBean != null) {
+				if (hasMoreTroops(troop, npcTroopBean)) return npcTroopBean;
+				return null;
+			}
 			if (level <= 0 || level > 5) return null;
 
 			var archery:int = getTechLevel(TechConstants.THROW_SKILL);
@@ -3662,6 +3837,24 @@ package scripts.jobQueue.script
 			return tr;			
 		}
 
+		private function getTroopBeanForNPC10() : TroopBean {
+			var tr:TroopBean;
+			if (npc10TroopBean != null) {
+				tr = npc10TroopBean;
+			} else {
+				tr = new TroopBean();
+				tr.archer = 90096;
+				tr.peasants = 2000;
+				tr.militia = 2000;
+				tr.scouter = 4000;
+				tr.pikemen = tr.swordsmen = tr.lightCavalry = tr.heavyCavalry = 1;
+			}
+			
+			if (hasMoreTroops(troop, tr)) return tr;
+			return null;
+		}
+
+
 		private var NPCLOOTS:Array = new Array(0, 215000, 355000, 1200000, 2260000, 3999000);
 		private function getResourceBeanForNPCLevel(level:int) : ResourceBean {
 			if (level <= 0 || level > 5) return null;
@@ -3681,7 +3874,10 @@ package scripts.jobQueue.script
 
 		private function getTroopBeanForLevel(level:int) : TroopBean {
 			if (level == -1) return null;
-			if (valleyTroopBean != null) return getPresetTroopBean(valleyTroopBean);
+			if (valleyTroopBean != null) {
+				if (hasMoreTroops(troop, valleyTroopBean)) return valleyTroopBean;
+				return null;
+			}
 			
 			var tr:TroopBean = new TroopBean();
 			var archers:Array = new Array(0, 50, 100, 200,  400,  800, 1600,  3200,  6400, 12800, 19990);
@@ -3889,11 +4085,13 @@ package scripts.jobQueue.script
 			}
 			return count;			
 		}
-		private function countFlat5FieldsUnderAttack() : int {
+		
+		// current implementation would interfere with medal hunting
+		private function countFlatFieldsUnderAttack() : int {
 			var count:int = 0;
 			for each(var army:ArmyBean in selfArmies) {
 				if (army.startFieldId != castle.fieldId) continue;
-				if (Map.getType(army.targetFieldId) == FieldConstants.TYPE_FLAT && Map.getLevel(army.targetFieldId) == 5) {
+				if (Map.getType(army.targetFieldId) == FieldConstants.TYPE_FLAT) {
 					count++;
 				}
 			}
@@ -3925,9 +4123,11 @@ package scripts.jobQueue.script
 
 		private function findWorstField() : FieldBean {
 			var worst:FieldBean = fields[0];
+			var npcLevel:int = getBuildNPCLevel();
+			
 			for each(var field:FieldBean in fields) {
 				if (field.id == buildCityLocation) continue;
-				if (field.type == FieldConstants.TYPE_FLAT && field.level == 5) continue;
+				if (field.type == FieldConstants.TYPE_FLAT && field.level == npcLevel) continue;
 				if (field.type == resourceFieldType) {
 					if (worst.type == resourceFieldType) {
 						if (field.level < worst.level) worst = field;
@@ -3964,8 +4164,15 @@ package scripts.jobQueue.script
 			return false;
 		}
 		
+		private function getBuildNPCLevel() : int {
+			var npcLevel:int = getConfig(CONFIG_BUILDNPC);
+			if (npcLevel == 1) npcLevel = 5;		// hack to provide compatibility with old versions
+			return npcLevel;
+		}
+		
 		private function handleBuildNPC() : Boolean {
 			if (!citySlotAvailable()) return false;
+			var npcLevel:int = getBuildNPCLevel();
 			
 			// intentional -- so that the bot can be used to help building
 			// npc at far away places by manually attack the place			
@@ -3973,32 +4180,32 @@ package scripts.jobQueue.script
 			if (countActiveArmies() >= getBuildingLevel(BuildingConstants.TYPE_TRAINNING_FEILD)) return false;
 
 			// if a flat is currently owned
-			var flat5:FieldBean = null;
+			var flat:FieldBean = null;
 			for each (var field:FieldBean in fields) {
-				if (field.type == FieldConstants.TYPE_FLAT && field.level == 5) {
+				if (field.type == FieldConstants.TYPE_FLAT && field.level == npcLevel) {
 					if (getArmyWithResourceHeadingTo(field.id) != null) continue;
-					flat5 = field;
+					flat = field;
 					break;
 				}
 			}
 			
 			var newArmy:NewArmyParam;
-			if (flat5 != null) {
-				return sendTroopToBuildCity(flat5.id);
+			if (flat != null) {
+				return sendTroopToBuildCity(flat.id);
 			}
 
 			// checking condition for sending troop
-			if (countFlat5FieldsUnderAttack() > 0) return false;
-			if (flat5FieldsDetailInfo == null || flat5FieldsDetailInfo.length == 0) return false;	
+			if (countFlatFieldsUnderAttack() > 0) return false;
+			if (flatFieldsDetailInfo == null || flatFieldsDetailInfo.length == 0) return false;	
 			
 			var hero:HeroBean = bestHeroForExtTasks();
 			if (hero == null) return false;
 			
-			var troops:TroopBean = getTroopBeanForLevel(5);
+			var troops:TroopBean = getTroopBeanForLevel(npcLevel);
 			if (troops == null) return false;
 									
-			var fieldInfo:MapCastleBean = flat5FieldsDetailInfo[0];
-			flat5FieldsDetailInfo.removeItemAt(0);
+			var fieldInfo:MapCastleBean = flatFieldsDetailInfo[0];
+			flatFieldsDetailInfo.removeItemAt(0);
 			
 			// this is to prevent two towns building on the same spot -- the later is a hit on the newly built npc
 			if (!playerTimingAllowed("npcbuilding" + fieldInfo.id, 24*3600)) return false;
@@ -4012,7 +4219,7 @@ package scripts.jobQueue.script
 			newArmy.targetPoint = fieldInfo.id;
 			
 			npcLocations.push(fieldInfo.id);
-			logMessage("Attack level 5 flat " + Map.fieldIdToString(fieldInfo.id) + " for npc with " + troops.archer + " archers " +
+			logMessage("Attack flat " + Map.fieldIdToString(fieldInfo.id) + " for npc with " + troops.archer + " archers " +
 				Utils.formatTime(getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops)));
 
 			ActionFactory.getInstance().getArmyCommands().newArmy(castle.id, newArmy);
@@ -4304,6 +4511,70 @@ package scripts.jobQueue.script
 
 			return false;
 		}
+		
+		private function handleAttackNPC10() : Boolean {
+			if (npc10LimitTroopBean == null) return false;
+			if (!hasMoreTroops(troop, npc10LimitTroopBean)) return false;
+			if (localNPC10s == null) return false;
+			if (researches == null) return false;
+			if (isUnderBP()) return false;
+			if (enemyArmies.length > 0) return false;
+
+			if (countActiveArmies() >= getBuildingLevel(BuildingConstants.TYPE_TRAINNING_FEILD)) return false;
+
+			var hero:HeroBean = getHeroForNPC10();
+			if (getConfig(CONFIG_DEBUG) > 0) {
+				logMessage("checking idle hero: " + heroToString(hero));
+			}
+			if (hero == null) return false;
+
+			// use preset npcList if given, otherwise use localNPCs
+			var npcs:Array = (npc10List != null) ? npc10List : localNPC10s;
+			var validCount:int = 0;
+
+			for (var ind:int = 0; ind < npcs.length; ind++) {
+				var fieldId:int = npcs[ind];
+
+				if (npc10List == null) {
+					var level:int = Map.getLevel(fieldId);
+					if (level != 10) continue;
+				}
+				
+				var type:int = Map.getType(fieldId);
+				if (type == -1) return false;	
+				if (type != FieldConstants.TYPE_NPC) {
+					logMessage(Map.fieldIdToString(fieldId) + " is not or is no longer an npc");
+					npcs.splice(ind, 1);
+					continue;
+				}
+
+				var tr:TroopBean = getTroopBeanForNPC10();
+				if (tr == null) return false;
+				
+				validCount++;
+				if (isArmyToward(fieldId)) continue;
+				if (!playerTimingAllowed("attack" + fieldId, 8*3600)) continue;
+
+				var newArmy:NewArmyParam = new NewArmyParam();
+				newArmy.missionType = ObjConstants.ARMY_MISSION_OCCUPY;
+				newArmy.heroId = hero.id;
+				newArmy.targetPoint = fieldId;
+				newArmy.troops = tr;
+				newArmy.resource = new ResourceBean();
+				
+				logMessage("attack NPC10 " + Map.fieldIdToString(fieldId) + " with hero " + heroToString(hero) + " and " + troopBeanToString(newArmy.troops) +
+					Utils.formatTime(getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops)));
+				ActionFactory.getInstance().getArmyCommands().newArmy(castle.id, newArmy, handleArmyCommandResponse);				
+				Map.updateInfo(fieldId);
+				return true;
+			}
+
+			if (getConfig(CONFIG_DEBUG) > 0) {
+				logMessage("number of local npc10 " + npcs.length + ", appropriate level/troop: " + validCount);
+			}
+
+			return false;
+		}
 
 		// abandon conquer technique
 		private function handleAbandonLocalField() : void {
@@ -4347,7 +4618,7 @@ package scripts.jobQueue.script
 			lastTargetLevel = level;
 			lastTargetField = targetField;
 	
-			if (enemyArmies.length > 0 && enemyArmies[0].reachTime - (new Date()).getTime() < 7200 * 1000) return false;
+			if (enemyArmies.length > 0 && enemyArmies[0].reachTime - Utils.getServerTime() < 7200 * 1000) return false;
 			if (countActiveArmies() >= getBuildingLevel(BuildingConstants.TYPE_TRAINNING_FEILD)) return false;	
 			
 			var hero:HeroBean = bestHeroForExtTasks();
@@ -4405,7 +4676,7 @@ package scripts.jobQueue.script
 		}
 
 		private function handleAttackResourceFields() : Boolean {
-			if (enemyArmies.length > 0 && enemyArmies[0].reachTime - (new Date()).getTime() < 7200 * 1000) return false;
+			if (enemyArmies.length > 0 && enemyArmies[0].reachTime - Utils.getServerTime() < 7200 * 1000) return false;
 
 			// leave one field unoccupied
 			var extra:int = (getConfig(CONFIG_HUNTING) > 0 || getConfig(CONFIG_BUILDNPC) > 0 || buildCityLocation != -1) ? 1 : 0;
@@ -4445,7 +4716,7 @@ package scripts.jobQueue.script
 				newArmy.troops = tr;
 				newArmy.resource = new ResourceBean();
 				
-				logMessage("attack wood field " + Map.fieldIdToString(fieldInfo.id) + " for resource with hero " + hero.name + " and " + tr.archer + " archers, " + tr.militia + " militia " +
+				logMessage("attack field " + Map.fieldIdToString(fieldInfo.id) + " for resource with hero " + hero.name + " and " + tr.archer + " archers, " + tr.militia + " militia " +
 					Utils.formatTime(getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops)));
 				ActionFactory.getInstance().getArmyCommands().newArmy(castle.id, newArmy, handleArmyCommandResponse);				
 				Map.updateDetailInfo(fieldInfo.id);
@@ -4455,6 +4726,7 @@ package scripts.jobQueue.script
 			
 			return false;
 		}
+
 		private function handleShopUseGoodResponse(response:UseItemResultResponse) : void {
 			if (!masterTimer.canReceive(timeSlot)) return;
 			
@@ -4516,7 +4788,7 @@ package scripts.jobQueue.script
 			var friendlyTroop:TroopBean = getFriendlyTroopBean();
 			
 			var GATETIME:int = 60 * getConfig(CONFIG_GATE);
-			if (enemyArmies.length == 0 || (enemyArmies[0].reachTime != -1 && enemyArmies[0].reachTime - (new Date()).getTime() > GATETIME * 1000)) {
+			if (enemyArmies.length == 0 || (enemyArmies[0].reachTime != -1 && enemyArmies[0].reachTime - Utils.getServerTime() > GATETIME * 1000)) {
 				if (castle.goOutForBattle && troop.scouter + friendlyTroop.scouter < 100000) {
 					logMessage("Close gate to protect scouts");
 					castle.goOutForBattle = false;
@@ -4528,7 +4800,7 @@ package scripts.jobQueue.script
 				}
 			}
 			
-			if (enemyArmies.length > 0 && enemyArmies[0].reachTime != -1 && enemyArmies[0].reachTime - (new Date()).getTime() < GATETIME * 1000) {
+			if (enemyArmies.length > 0 && enemyArmies[0].reachTime != -1 && enemyArmies[0].reachTime - Utils.getServerTime() < GATETIME * 1000) {
 				var tr:TroopStrBean = enemyArmies[0].troop;				
 				if (isJunkTroop(tr)) return;
 
@@ -4585,7 +4857,7 @@ package scripts.jobQueue.script
 					break;
 				}				
 
-				var interval:int = (ind == -1 || enemyArmies[ind].reachTime > new Date().getTime() + 3600*1000) ? 600 : 60;
+				var interval:int = (ind == -1 || enemyArmies[ind].reachTime > Utils.getServerTime() + 3600*1000) ? 600 : 60;
 				if (cityTimingAllowed("attack", interval)) {
 					if (cityTimingAllowed("allattacks", 300)) {
 						logMessage("ATTACK by: " + attackArmyToString(enemyArmies[0]) + ", " + enemyArmies.length + " waves");
@@ -4625,7 +4897,7 @@ package scripts.jobQueue.script
 			// army is real army
 			var EVASIONTIME:int = 60 * getConfig(CONFIG_HIDING);	
 
-			if (army.reachTime != -1 && army.reachTime - (new Date()).getTime() < EVASIONTIME * 1000) {
+			if (army.reachTime != -1 && army.reachTime - Utils.getServerTime() < EVASIONTIME * 1000) {
 				tradingLimited = true;
 				if (tradesArray.length != 0) { 
 					cancelAllPendingTrades(); 
@@ -4664,7 +4936,7 @@ package scripts.jobQueue.script
 			if (evasionFieldId == -1) return false;
 			
 			var evasionEndTime:Number = getEvasionEndTime();
-			var evasionDuration:Number = (evasionEndTime - new Date().getTime()) / 1000 + 5; 	// in seconds
+			var evasionDuration:Number = (evasionEndTime - Utils.getServerTime()) / 1000 + 5; 	// in seconds
 			var rsLevel:int = getBuildingLevel(BuildingConstants.TYPE_TRAINNING_FEILD);
 			
 			if (troop.carriage <= 1) return false;			// don't bother	
@@ -4766,7 +5038,7 @@ package scripts.jobQueue.script
 			
 			var army:ArmyBean = getArmyWithResourceHeadingTo(evasionFieldId);
 			if (army == null) return;					// has been recalled already
-			if (army.reachTime + 2000 >= (new Date()).getTime()) {
+			if (army.reachTime + 2000 >= Utils.getServerTime()) {
 				// almost returned troop, may or may not be evasion troop
 				// let's not display the status to avoid confusion
 			} else {
@@ -4810,6 +5082,14 @@ package scripts.jobQueue.script
 			return true;
 		}
 		
+		private static function hasMoreTroops(tr:TroopBean, cond:TroopBean) : Boolean {
+			var condObj:Object = cond.toObject();
+			for (var key:String in condObj) {
+				if (cond[key] > tr[key]) return false;
+			}
+			return true;
+		}
+		
 		public function dumpTroop(fieldId:int, cond:TroopBean, tr:TroopBean) : Boolean {
 			if (countActiveArmies() >= getBuildingLevel(BuildingConstants.TYPE_TRAINNING_FEILD)) {
 				return false;
@@ -4821,11 +5101,8 @@ package scripts.jobQueue.script
 			}
 			
 			var total:TroopBean = getAvailableTroop();
-			var totalObj:Object = total.toObject();
-			for (var key:String in totalObj) {
-				if (cond[key] > totalObj[key]) return false;
-				if (tr[key] > totalObj[key]) return false;
-			}
+			if (!hasMoreTroops(total, cond)) return false;
+			if (!hasMoreTroops(total, tr)) return false;
 			
 			var newArmy:NewArmyParam = new NewArmyParam();
 			newArmy.troops = tr;
@@ -4935,7 +5212,7 @@ package scripts.jobQueue.script
 			}
 
 			// enemy is too near
-			if (enemyArmies.length > 0 && enemyArmies[0].reachTime - new Date().getTime() < 60000) return;
+			if (enemyArmies.length > 0 && enemyArmies[0].reachTime - Utils.getServerTime() < 60000) return;
 
 			// there are still a lot of troop, let normal comfort procedure deal with the situation
 			// fighting will happen -- will handle later after fighting
@@ -4998,6 +5275,47 @@ package scripts.jobQueue.script
 				return true;
 			}
 		}
+
+		public function npc10heroes(str:String) : void {
+			var arr:Array = str.toLowerCase().split(",");
+			
+			for each(var heroName:String in arr) {
+				var found:Boolean = false;
+				for each (var hero:HeroBean in heroes) {
+					if (hero.name.toLowerCase() == heroName) found = true;
+				}
+				if (!found) {
+					logMessage("Warning: hero " + heroName + " is not currently in this town");
+				}
+			}
+			npc10Heroes = arr;
+			// logMessage("List of heroes used for npc farming: " + npcHeroes.join(","));
+		}
+		
+		public function npc10troops(str:String) : Boolean {
+			var tr:TroopBean = CityState.getTroopsStatic(str);
+			if (tr == null) {
+				logMessage("Invalid troop: " + str);
+				return false;
+			} else if (countTroop(tr) > 10000 * getBuildingLevel(BuildingConstants.TYPE_TRAINNING_FEILD)) {
+				logMessage("Too many npc troops for current rally spot level");
+				return false;
+			} else {
+				npc10TroopBean = tr;
+				return true;
+			}
+		}
+
+		public function npc10limit(str:String) : Boolean {
+			var tr:TroopBean = CityState.getTroopsStatic(str);
+			if (tr == null) {
+				logMessage("Invalid npc10limit troop: " + str);
+				return false;
+			} else {
+				npc10LimitTroopBean = tr;
+				return true;
+			}
+		}
 		
 		public function valleytroops(str:String) : Boolean {
 			var tr:TroopBean = CityState.getTroopsStatic(str);
@@ -5017,6 +5335,13 @@ package scripts.jobQueue.script
 			var targetId:int = Map.coordStringToFieldId(coords);
 			if (targetId == -1) return false;
 			huntingLocation = targetId;
+			return true;
+		}
+
+		public function nexttrainingpos(coords:String) : Boolean {
+			var targetId:int = Map.coordStringToFieldId(coords);
+			if (targetId == -1) return false;
+			trainingHeroNextStop = targetId;
 			return true;
 		}
 
@@ -5045,7 +5370,33 @@ package scripts.jobQueue.script
 			}
 			return good;
 		}
-				
+		
+		public function npc10list(str:String) : Boolean {
+			var arr:Array = str.toLowerCase().split(" ");
+			var good:Boolean = true;
+			var any:Boolean = false;
+			
+			if (npc10List == null) npc10List = new Array();
+			for each(var locStr:String in arr) {
+				var fieldId:int = Map.coordStringToFieldId(locStr);
+				if (fieldId == -1) {
+					logMessage("Invalid location " + locStr);
+					good = false;
+				} else if (npc10List.indexOf(fieldId) != -1) {
+					logMessage("Repetitive location " + locStr);
+					good = false;
+				} else {
+					npc10List.push(fieldId);
+					any = true;
+				}
+			}
+			if (!any) {
+				logMessage("No npc added from " + str);
+				good = false;
+			}
+			return good;
+		}
+
 		private var loyaltyAttackFieldId:int = -1;
 		private var loyaltyAttackNumCav:int = 500;
 		private var loyaltyAttackOnly:Boolean = true;
@@ -5419,7 +5770,7 @@ package scripts.jobQueue.script
 			guardedAttackFieldId = -1;
 		}
 		
-		private function recallTroopTo(fieldId:int) : void {
+		public function recallTroopTo(fieldId:int) : void {
 			for each (var army:ArmyBean in selfArmies) {
 				if (army.startFieldId == castle.fieldId && army.targetFieldId == fieldId && army.direction == ArmyConstants.ARMY_FORWARD) {
 					logMessage("Recall troop to " + Map.fieldIdToString(fieldId) + ", id: " + army.armyId);
@@ -6178,6 +6529,9 @@ package scripts.jobQueue.script
 				if (args[0] == "npclist") {
 					args.splice(0, 1);
 					if (!npclist(args.join(" "))) good = false;
+				} else if (args[0] == "npc10list") {
+					args.splice(0, 1);
+					if (!npc10list(args.join(" "))) good = false;
 				} else if (args.length != 2) {
 					good = false;
 					logMessage("Invalid line: " + str);
@@ -6210,11 +6564,19 @@ package scripts.jobQueue.script
 						good = false;
 					}
 				} else if (args[0] == "npcheroes") {
-					npcheroes(args[1]);
-				} else if (args[0] == "npctroops") {
-					if (!npctroops(args[1])) {
+					npcheroes(args[1]);		
+				} else if (args[0] == "valleytroops") {
+					if (!valleytroops(args[1])) {
 						good = false;
-					}					
+					}
+				} else if (args[0] == "npc10troop") {
+					if (!npc10troops(args[1])) {
+						good = false;
+					}
+				} else if (args[0] == "npc10heroes") {
+					npc10heroes(args[1]);		
+				} else if (args[0] == "npc10limit") {
+					npc10limit(args[1]);
 				} else if (args[0] == "valleytroops") {
 					if (!valleytroops(args[1])) {
 						good = false;
@@ -6223,10 +6585,34 @@ package scripts.jobQueue.script
 					if (!huntingpos(args[1])) {
 						good = false;
 					}
+				} else if (args[0] == "nexttrainingpos") {
+					if (!nexttrainingpos(args[1])) {
+						good = false;
+					}
+				} else if (args[0] == "traininghero") {
+					trainingHeroName = args[1];
+					trainingHeroNeeded = true;
 				} else {
-					logMessage("Error: " + args[0] + " must be either build, research, config, ballsused, troop, or fortification");
+					logMessage("Error: " + args[0] + " must be among build, research, config, ballsused, troop, fortification, npclist, npctroop, npcheroes, valleytroops, huntingpos");
 					good = false;
 				}
+			}
+
+			if (trainingHeroName != null && !isTrainingHeroPresent() && getBuildingLevel(BuildingConstants.TYPE_HEROS_MANSION) == heroes.length) {
+				logMessage("Warning: training hero is not in town and there is no space available in hero mansion, remove training heroes");
+				trainingHeroName = null;
+				good = false;
+			}
+			
+			if (trainingHeroName == null && trainingHeroNextStop != -1) {
+				logMessage("Warning: no training hero, training next position removed");
+				trainingHeroNextStop = -1;
+				good = false;
+			}
+			
+			if (trainingHeroName != null && getConfig(CONFIG_DUMPING) <= 0) {
+				logMessage("Warning: training hero is not useful when dumping option is off, enable config dumping");
+				configs[CONFIG_DUMPING] = 1;
 			}
 			
 			displayConfig();			
@@ -6287,6 +6673,47 @@ package scripts.jobQueue.script
     			// setTimeout must be used, calling the function directly WON'T work
     			setTimeout(ActionFactory.getInstance().getAllianceCommands().getMilitarySituationList, 2000, reportPage, 6, handleMilitarySituationListResponse);			
     		}
+   		}
+   		
+   		private function moveTrainingHero() : Boolean {
+   			if (trainingHeroName == null || trainingHeroNeeded || trainingHeroNextStop == -1 || troop.scouter == 0) return false;
+			
+			var trainingHero:HeroBean = getTrainingHero();
+			if (trainingHero == null) return false;
+			if (trainingHero.status != HeroConstants.HERO_CHIEF_STATU && trainingHero.status != HeroConstants.HERO_FREE_STATU) return false;
+			if (countActiveArmies() >= getBuildingLevel(BuildingConstants.TYPE_TRAINNING_FEILD)) return false;
+			
+			var fieldType:int = Map.getType(trainingHeroNextStop);
+			var detail:MapCastleBean = Map.getDetailInfo(trainingHeroNextStop);
+			if (detail == null || fieldType == -1) {
+				trainingHeroNeeded = true; // hack to make sure hero is not out farming while waiting for target info
+				return false;
+			}
+			
+			// try to be sure that the next stop is still good
+			if (fieldType != FieldConstants.TYPE_CASTLE || detail.userName != player.playerInfo.userName || !detail.canSend) {
+				if (cityTimingAllowed("moveheroerror", 300)) logMessage("Invalid next training hero location: " + Map.fieldIdToString(trainingHeroNextStop));
+				return false;
+			}
+
+			var waitTime:int = (npc10LimitTroopBean != null) ? 3600 : 900;
+			if (!playerTimingAllowed("movetraininghero", waitTime)) return false;
+			
+			// all are good, now move the hero
+   			var newArmy:NewArmyParam = new NewArmyParam();
+			newArmy.missionType = ObjConstants.ARMY_MISSION_SEND;
+			newArmy.heroId = trainingHero.id;
+			newArmy.targetPoint = trainingHeroNextStop;
+			newArmy.troops = new TroopBean();
+			newArmy.troops.scouter = 1;
+			newArmy.resource = new ResourceBean();
+				
+			logMessage("Move training hero to " + Map.fieldIdToString(trainingHeroNextStop) + ", arriving in " +
+				Utils.formatTime(getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops)));		
+			ActionFactory.getInstance().getArmyCommands().newArmy(castle.id, newArmy, handleArmyCommandResponse);				
+			Map.updateDetailInfo(trainingHeroNextStop);
+			Map.updateInfo(trainingHeroNextStop);
+			return true;
    		}
 	}
 }

@@ -253,7 +253,7 @@ package scripts.jobQueue.script
 			timeInt *= 1000;
 
 			finishTime = new Date();
-		 	finishTime.setTime(finishTime.getTime() + timeInt);
+		 	finishTime.setTime(Utils.getServerTime() + timeInt);
 		 	logMessage("Sleeping for " + timeInt/1000 + " seconds until " + finishTime.toLocaleTimeString());
 			m_intervalCommand = setTimeout(
 				function () : void

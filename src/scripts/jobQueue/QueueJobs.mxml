@@ -114,17 +114,24 @@
 		        	trace(loginResponse.errorMsg);
 	        		return;
 	        	}
-
-	        	appendToTextArea(logs, " Logged in successfully.");
 	        	
 	        	/*
 	        	var date:Date = new Date();
 	        	logs.text += "\n"+date.toLocaleTimeString()+;
 	        	*/
 	        	
-	        	Map.initMap(loginResponse.player.mapSizeX, loginResponse.player.mapSizeY);
 	        	currentPlayer = loginResponse.player; 
-	        	parseCities(loginResponse.player.castlesArray.toArray(), currentPlayer);
+	        	Map.initMap(currentPlayer.mapSizeX, currentPlayer.mapSizeY);
+	        	Utils.setServerTime(currentPlayer.currentTime);
+	        	
+	        	var date:Date = new Date();
+	        	date.setTime(Utils.getServerTime());
+	        	appendToTextArea(logs, " Logged in successfully, server time lag: " + int(Utils.getServerLagTime()/1000) + "s");
+	        	if (Math.abs(Utils.getServerLagTime()) > 5000) {	// more than 5s lag
+	        		appendToTextArea(logs, "YOU MAY WISH TO ADJUST YOUR COMPUTER TIME TO AVOID CONFUSION");
+	        		appendToTextArea(logs, "Current computer time: " + new Date().toLocaleTimeString());
+	        	}
+	        	parseCities(currentPlayer.castlesArray.toArray(), currentPlayer);
 	        		        	
 	        	citiesTab.dataProvider = citiesViewStack;
 
@@ -267,6 +274,7 @@
 	        private function appendToTextArea(textControl:TextArea, message:String) : void
 	        {
 	        	var date:Date = new Date();
+	        	date.setTime(Utils.getServerTime());
 	        	
 	        	if (cache[textControl.id] == undefined) cache[textControl.id] = textControl.text;
 	        	

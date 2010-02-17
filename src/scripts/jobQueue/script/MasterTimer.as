@@ -3,8 +3,8 @@ package scripts.jobQueue.script
 	import flash.utils.Timer;
 	import flash.events.TimerEvent;
 	
-	// allow processes to reserve 20 seconds slot
-	// return canSend for the first 10 seconds of the allotted time
+	// allow processes to reserve 28 seconds slot
+	// return canSend for the first 18 seconds of the allotted time
 	
 	public class MasterTimer
 	{
@@ -13,11 +13,11 @@ package scripts.jobQueue.script
 		private var timer:Timer;
 		private var numSlots:int = 0;
 		private var counter:int = 0;
-		private var slotSize:int = 25;
-		private var sendSlotSize:int = 10;
+		private var slotSize:int = 28;
+		private var sendSlotSize:int = 18;
 		
 		function MasterTimer() {
-			timer = new Timer(1400);
+			timer = new Timer(1000);
 			timer.addEventListener(TimerEvent.TIMER, onTimer);
 			timer.start();
 		}

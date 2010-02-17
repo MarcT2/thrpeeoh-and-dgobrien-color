@@ -346,31 +346,7 @@ package scripts.jobQueue.script
 		{
 			currentAction = "recall";
 			var targetId:int = Map.coordStringToFieldId(coords);
-			var army:ArmyBean;
-			for each (army in currentAttacks) {
-				if (army.targetFieldId == targetId) {
-					onCommandResult("Recall troop to " + coords + ", id: " + army.armyId);
-					ActionFactory.getInstance().getArmyCommands().callBackArmy(castle.id, army.armyId);
-				}
-			}
-			for each (army in currentTransports) {
-				if (army.targetFieldId == targetId) {
-					onCommandResult("Recall troop to " + coords + ", id: " + army.armyId);
-					ActionFactory.getInstance().getArmyCommands().callBackArmy(castle.id, army.armyId);
-				}
-			}
-			for each (army in currentScouts) {
-				if (army.targetFieldId == targetId) {
-					onCommandResult("Recall troop to " + coords + ", id: " + army.armyId);
-					ActionFactory.getInstance().getArmyCommands().callBackArmy(castle.id, army.armyId);
-				}
-			}
-			for each (army in currentReinforce) {
-				if (army.targetFieldId == targetId) {
-					onCommandResult("Recall troop to " + coords + ", id: " + army.armyId);
-					ActionFactory.getInstance().getArmyCommands().callBackArmy(castle.id, army.armyId);
-				}
-			}
+			cityManager.recallTroopTo(targetId);
 			onCommandFinished(true);
 		}
 
@@ -1523,6 +1499,8 @@ package scripts.jobQueue.script
 			{
 				var timeat:Date;
 				now = new Date();
+				now.setTime(Utils.getServerTime());
+
 				switch (timeArray.length)
 				{
 					case 2:
@@ -2190,15 +2168,14 @@ package scripts.jobQueue.script
 
 			if (currentResearch != null)
 			{
-				var now:Date = new Date();
 				// check if research has completed, but 'complete' wasn't triggered
-				if (currentResearch.endTime < now.getTime())
+				if (currentResearch.endTime < Utils.getServerTime())
 				{
 					currentResearch = null;
 				}
 				else
 				{
-					waitTime = currentResearch.endTime - now.getTime();
+					waitTime = currentResearch.endTime - Utils.getServerTime();
 					onCommandResult(
 						"Currently researching " +
 						TechType.toString(currentResearch.typeId) +
@@ -2920,7 +2897,7 @@ package scripts.jobQueue.script
 					}
 
 					arrivalTime = new Date();
-		 			arrivalTime.setTime(arrivalTime.getTime() + (travelTime+newArmy.restTime)*1000);
+		 			arrivalTime.setTime(Utils.getServerTime() + (travelTime+newArmy.restTime)*1000);
 
 					setCommandResponse(ResponseDispatcher.ARMY_NEW_ARMY, handleCommandResponse);
 

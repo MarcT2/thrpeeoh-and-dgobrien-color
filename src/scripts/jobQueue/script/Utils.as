@@ -2,10 +2,15 @@ package scripts.jobQueue.script
 {
 	public class Utils
 	{
-		public function Utils()
-		{
+		private static var serverTimeAdjust:Number = 0;
+		public static function getServerLagTime() : Number { return serverTimeAdjust; }
+		public static function setServerTime(serverTime:Number) : void {
+			serverTimeAdjust = serverTime - new Date().getTime();
 		}
-
+		public static function getServerTime() : Number {
+			return new Date().getTime() + serverTimeAdjust;
+		}
+		
 		public static function trim(str:String):String
 		{
 		    for(var i:int = 0; str.charCodeAt(i) < 33; i++);
