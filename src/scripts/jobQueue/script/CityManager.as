@@ -446,7 +446,10 @@ package scripts.jobQueue.script
 			var arr:Array = str.toLowerCase().split(",");
 			for each (var args:String in arr) {
 				var subarr:Array = args.split(":");
-				if (configNames.indexOf(subarr[0]) != -1) {
+				if (subarr.length != 2) {
+					logError("Invalid config setting, expecting name:value but getting " + args);
+					good = false;
+				} else if (configNames.indexOf(subarr[0]) != -1) {
 					if (Utils.isNumeric(subarr[1])) {
 						configs[subarr[0]] = Number(subarr[1]);
 					} else {
@@ -2205,7 +2208,7 @@ package scripts.jobQueue.script
 			var config:int = getConfig(CONFIG_HERO);
 			var pBest:HeroBean = bestPoliticsHero();
 			var iBest:HeroBean = (getConfig(CONFIG_RESEARCH) > 0 && getConfig(CONFIG_HERO) % 10 > 0) ? bestIntelHero() : null;
-			var trainingHero:HeroBean = (trainingHeroNextStop != -1) ? getTrainingHero() : null;
+			var trainingHero:HeroBean = (trainingHeroNextStop != -1 || trainingHeroNeeded) ? getTrainingHero() : null;
 
 			var best:HeroBean = null;
 			if (config/10 >= 2) {
@@ -3085,9 +3088,9 @@ package scripts.jobQueue.script
 					batch = int(batch/5) * 5;
 					if (batch < 5) batch = 5;
 					
-					if (batch > troopRequirement[ troopIntNames[type] ] - totalTroop[ troopIntNames[type] ]) {
-						batch = troopRequirement[ troopIntNames[type] ] - totalTroop[ troopIntNames[type] ];
-					}
+//					if (batch > troopRequirement[ troopIntNames[type] ] - totalTroop[ troopIntNames[type] ]) {
+//						batch = troopRequirement[ troopIntNames[type] ] - totalTroop[ troopIntNames[type] ];
+//					}
 					
 					if (!canProduceTroop(type, building.level, batch)) continue;
 
@@ -3202,9 +3205,9 @@ package scripts.jobQueue.script
 					var batch:int = 0;	
 					while (canProduceTroop(type, building.level, batch + 10) && resource.workPeople + pop*(batch+10) <= resource.curPopulation) batch += 10;
 
-					if (batch > troopRequirement[ troopIntNames[type] ] - totalTroop[ troopIntNames[type] ]) {
-						batch = troopRequirement[ troopIntNames[type] ] - totalTroop[ troopIntNames[type] ];
-					}
+//					if (batch > troopRequirement[ troopIntNames[type] ] - totalTroop[ troopIntNames[type] ]) {
+//						batch = troopRequirement[ troopIntNames[type] ] - totalTroop[ troopIntNames[type] ];
+//					}
 
 					if (batch <= maxBatch / 6) continue;
 					if ((type == TFConstants.T_BALLISTA || type == TFConstants.T_CARRIAGE) && batch > 100) batch = 100;
@@ -4585,7 +4588,8 @@ package scripts.jobQueue.script
 
 			for each (var field:FieldBean in fields) {
 				if (field.id == buildCityLocation) continue;
-				if (field.id == targetField) {
+				// race condition can happen as handleAbandonLocalField is called from 2 different places
+				if (field.id == targetField && playerTimingAllowed("abandonfield" + targetField, 3)) {
 					logMessage("Abandon field: " + Map.fieldIdToString(field.id));
 					ActionFactory.getInstance().getFieldCommand().giveUpField(field.id);
 					free = true;
@@ -4999,7 +5003,12 @@ package scripts.jobQueue.script
 			}
 
 			newArmy.heroId = hero.id;
-
+			
+			// fudging the numbers a little bit to avoid dealing with numerical rounding error
+			// or other unknown problems when all the food must be transported
+			// 1 should be enough, but let's use 2000 to be safe
+			foodConsume += 2000;
+			
 			var maxLoad:Number = newArmy.troops.carriage * 5000 - foodConsume;
 			if (researches != null) {
 				maxLoad = newArmy.troops.carriage * 500 * (10 + getTechLevel(TechConstants.LOAD_TECH)) - foodConsume;
@@ -5670,6 +5679,12 @@ package scripts.jobQueue.script
 				return;
 			}
 			
+			if (Map.getType(loyaltyAttackFieldId) != FieldConstants.TYPE_CASTLE) {
+				logMessage("Loyalty attack target is not a castle: " + Map.fieldIdToString(loyaltyAttackFieldId));
+				endloyaltyattack();
+				return;				
+			}
+			
 			if (loyaltyAttackNumCav > getBuildingLevel(BuildingConstants.TYPE_TRAINNING_FEILD) * 10000) {
 				logMessage("TOO MANY TROOPS USED IN LOYALTY ATTACK ON " + Map.fieldIdToString(loyaltyAttackFieldId));
 				endloyaltyattack();
@@ -5702,6 +5717,7 @@ package scripts.jobQueue.script
 			newArmy.heroId = hero.id;
 			newArmy.targetPoint = loyaltyAttackFieldId;
 			Map.updateDetailInfo(loyaltyAttackFieldId);
+			Map.updateInfo(loyaltyAttackFieldId);
 			
 			logMessage("Loyalty attack on " + Map.fieldIdToString(loyaltyAttackFieldId) + " with hero " + hero.name + " and " + newArmy.troops.lightCavalry + " cavalries " +
 				Utils.formatTime(getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops)));

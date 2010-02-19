@@ -2088,7 +2088,7 @@ package scripts.jobQueue.script
 					comfort = CityStateConstants.COMFORT_POPULATION_RAISE;
 					break;
 				default :
-					onCommandResult(new ScriptError("Unknown comfort type: " + comfortType, -9999));
+					onCommandFinished(new ScriptError("Unknown comfort type: " + comfortType, -9999));
 					return;
 			}
 
