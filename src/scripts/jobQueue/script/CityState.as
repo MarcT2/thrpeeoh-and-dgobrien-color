@@ -123,12 +123,6 @@ package scripts.jobQueue.script
 		 * but must be in the format: <troopname>:<amount>,<troopname>:<amount>
 		 * See GetTroops for possible options and for adding more
 		 */
-		public function citystatus():void {
-			currentAction = "citystatus";
-			cityManager.displayStatus();
-			onCommandFinished(true);
-		}
-		
 		public function listmedals():void {
 			currentAction = "listmedals";
 			cityManager.listMedals();
@@ -376,7 +370,7 @@ package scripts.jobQueue.script
 	            var transTime:int = attackTime/speedup;
 	            distance = int(distance*100) / 100.0;
 	            onCommandResult("Distance to " + coords + ": " + distance + ", attack time: " + Utils.formatTime(attackTime) + ", reinforce time: " + Utils.formatTime(transTime) 
-	            	+ ", carrying load: " + cityManager.getCarryingLoad(troop) + ", food needed to attack: " + int(cityManager.getFoodConsume(troop)*attackTime/3600*2) + ", to reinforce: " + int(cityManager.getFoodConsume(troop)*transTime/3600*2));	
+	            	+ ", carrying load: " + cityManager.getCarryingLoad(troop) + ", food needed to attack: " + int(cityManager.getFoodConsumeRate(troop)*attackTime/3600*2) + ", to reinforce: " + int(cityManager.getFoodConsumeRate(troop)*transTime/3600*2));	
             }
 			onCommandFinished(true);
         }
@@ -608,9 +602,9 @@ package scripts.jobQueue.script
 				+ " " 
 				+ CallbackParams.autofarmtroops 
 				+ " //Distance: " + int(npc2.distance) 
-				+ " Mission time: " + timeToString(traveltime) + "\n";
+				+ " Mission time: " + Utils.formatTime(traveltime) + "\n";
 			}
-			report += "//Accumulated mission time: " + timeToString(traveltimeacc) + "\n";
+			report += "//Accumulated mission time: " + Utils.formatTime(traveltimeacc) + "\n";
 			onCommandResult(report);	  		
 			onCommandResult("Auto farm complete");
 			onCommandFinished(true);
@@ -3195,26 +3189,6 @@ package scripts.jobQueue.script
 			}
 			return;
 		}
-						
-//		private function troopSpeed(troopCount:int, troopType:int, SkillParam:int, distance:Number) : int
-//        {
-// 
-//            var loc1:*;
-//            loc1 = distance * 60000;
-//            var basespeed:*;
-//            basespeed = TroopEumDefine.getTroopEumByType(troopType).speed;
-//            var speed:*;
-//             
-//            if (troopCount == 0)
-//            {
-//            	return 0;
-//            }
-//            else 
-//            {
-//                speed = basespeed * (1 + SkillParam / 100);
-//                return (loc1 / speed * 1000) / 1000;
-//            }
-//        }
 
         private function getDistance(base1:int=0, target2:int=0) : Number {
         	if (base1 == 0) base1 = castle.fieldId;
@@ -3242,30 +3216,6 @@ package scripts.jobQueue.script
 			return 1;
 		}
   		
-  		private static function timeToString(arg1:int):String
-        {
-            var loc1:*;
-            loc1 = "";
-            var loc2:int;
-            loc2 = arg1 / (60 * 60);
-            if (loc2 > 0)
-            {
-                loc1 = loc1 + loc2 +  "h ";
-            }
-            var loc3:int;
-            loc3 = arg1 / 60 % 60;
-            if (loc1.length > 0 || loc3 > 0)
-            {
-                loc1 = loc1 + loc3 + "m ";
-            }
-            var loc4:int;
-            if ((loc4 = arg1 % 60) < 10)
-            {
-                loc1 = loc1 + "0";
-            }
-            loc1 = loc1 + loc4 + "s";
-            return loc1;
-        }
 		public static function getFortifications(troops:String) : FortificationsBean {
 			var troopObj:FortificationsBean = new FortificationsBean();
 			var troopArray:Array = troops.split(",");
