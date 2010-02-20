@@ -3150,6 +3150,7 @@ package scripts.jobQueue.script
 				}
 			}
 
+			var estQueueLength:Array = new Array();
 			var types:Array = new Array(TFConstants.T_BALLISTA, TFConstants.T_CARRIAGE, TFConstants.T_SWORDSMEN, TFConstants.T_PIKEMAN, TFConstants.T_LIGHTCAVALRY, TFConstants.T_HEAVYCAVALRY, TFConstants.T_PEASANTS, TFConstants.T_MILITIA, TFConstants.T_SCOUTER, TFConstants.T_ARCHER, TFConstants.T_BATTERINGRAM, TFConstants.T_CATAPULT);		
 			for each (var type:int in types) {
 				troopCond = getConditionBeanForTroop(type);
@@ -3166,8 +3167,10 @@ package scripts.jobQueue.script
 					if (building.typeId != BuildingConstants.TYPE_BARRACK) continue;
 					if (building == reservedBarrack) continue;
 					var barrackBean:AllProduceBean = getTroopQueueForBuilding(building);
+					if (estQueueLength[building.positionId] == undefined) estQueueLength[building.positionId] = barrackBean.allProduceQueueArray.length;
+
 					// dumping should always start from position 2 or later
-					var curQueueSize:int = Math.max(2, barrackBean.allProduceQueueArray.length);
+					var curQueueSize:int = Math.max(2, estQueueLength[building.positionId]);
 					if (barrackBean == null || curQueueSize >= building.level) continue; // do not use full production queue
 
 					var batch:int = 0;	
@@ -3192,6 +3195,7 @@ package scripts.jobQueue.script
 						for each(resName in resourceIntNames) estResource[resName] -= troopCond[resName] * amount;
 						estResource.curPopulation -= (troopPopulations[type] * amount);
 						estIdle -= (troopPopulations[type] * amount);
+						estQueueLength[building.positionId] = j+1;
 						if (getConfig(CONFIG_DEBUG) == DEBUG_POPULATION) logMessage("after: est population: " + estResource.curPopulation + ", est worker: " + estResource.workPeople + ", est idle: " + estIdle);	
 					
 						batch -= amount;
@@ -4173,7 +4177,8 @@ package scripts.jobQueue.script
 			
 			var troops:TroopBean = getTroopBeanForLevel(npcLevel);
 			if (troops == null) return false;
-	
+
+			var fieldInfo:MapCastleBean = flatFieldsDetailInfo[0];
 			newArmy = new NewArmyParam();
 			newArmy.missionType = ObjConstants.ARMY_MISSION_OCCUPY;
 			newArmy.troops = troops;
@@ -4182,7 +4187,7 @@ package scripts.jobQueue.script
 			newArmy.targetPoint = fieldInfo.id;
 			
 			if (!hasResourceForArmy(newArmy)) return false;
-			var fieldInfo:MapCastleBean = flatFieldsDetailInfo[0];
+
 			flatFieldsDetailInfo.removeItemAt(0);
 			if (Map.getType(fieldInfo.id) != FieldConstants.TYPE_FLAT) return false;
 			
@@ -6638,7 +6643,7 @@ package scripts.jobQueue.script
 			}
 
 			if (trainingHeroName != null && !isTrainingHeroPresent() && getBuildingLevel(BuildingConstants.TYPE_HEROS_MANSION) == heroes.length) {
-				logMessage("Warning: training hero is not in town and there is no space available in hero mansion, remove training heroes");
+				logMessage("Warning: training hero is not in town and there is no space available in FEASTING HALL, remove training heroes");
 				trainingHeroName = null;
 				good = false;
 			}
