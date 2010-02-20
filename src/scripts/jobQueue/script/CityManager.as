@@ -3839,6 +3839,7 @@ package scripts.jobQueue.script
 				tr.peasants = 2000;
 				tr.militia = 2000;
 				tr.scouter = 4000;
+				tr.carriage = 1900;
 				tr.pikemen = tr.swordsmen = tr.lightCavalry = tr.heavyCavalry = 1;
 			}
 			
