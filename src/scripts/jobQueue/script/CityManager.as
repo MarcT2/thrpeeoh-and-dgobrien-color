@@ -161,6 +161,7 @@ package scripts.jobQueue.script
 		// other customizations
 		private var npcList:Array = null;
 		private var npcHeroes:Array = null;
+		private var spamHeroes:Array = null;
 		private var npcTroopBean:TroopBean = null;
 		private var npc10List:Array = null;
 		private var npc10Heroes:Array = null;
@@ -1547,7 +1548,13 @@ package scripts.jobQueue.script
 			if (amount == 0) return;
 			if (tradesArray.length >= getBuildingLevel(BuildingConstants.TYPE_MARKET)) return;
 			var price:Number = sellPrice(resType) * 0.1 + buyPrice(resType) * 0.9;
-			price = int(price*1000) / 1000;
+
+			if (price >= 10) {
+				price = int(price*100) / 100;
+			} else {
+				price = int(price*1000) / 1000;
+			}
+
 			if (needGoldNow) price = sellPrice(resType);
 			if (estResource.gold < price*amount*0.005) return;
 			
@@ -1570,7 +1577,12 @@ package scripts.jobQueue.script
 			if (amount == 0) return;
 			if (tradesArray.length >= getBuildingLevel(BuildingConstants.TYPE_MARKET)) return;
 			var price:Number = buyPrice(resType) * 0.1 + sellPrice(resType) * 0.9;
-			price = int(price*1000) / 1000;
+			if (price >= 10) {
+				price = int(price*100) / 100;
+			} else {
+				price = int(price*1000) / 1000;
+			}
+
 			if (needResourceNow) price = buyPrice(resType);
 			if (estResource.gold < price*amount*1.005) return;
 			
@@ -2200,14 +2212,19 @@ package scripts.jobQueue.script
 			return best;
 		}
 
-		private function getHeroForNPCFromList(arr:Array) : HeroBean {
+		// as a safeguard, also be careful not to pick the training hero
+		// if picking a mayor, make sure the mayor is released
+		private function getIdleHeroFromList(arr:Array) : HeroBean {
 			var trainingHero:HeroBean = (trainingHeroNeeded) ? getTrainingHero() : null;
 
 			for each(var hero:HeroBean in heroes) {
-				if (hero.status != HeroConstants.HERO_FREE_STATU) continue;
+				if (hero.status != HeroConstants.HERO_FREE_STATU && hero.status != HeroConstants.HERO_CHIEF_STATU) continue;
 				if (hero == trainingHero) continue;
 				for each(var heroName:String in arr) {
-					if (hero.name.toLowerCase() == heroName.toLowerCase()) return hero;
+					if (hero.name.toLowerCase() == heroName.toLowerCase()) {
+						if (hero.status == HeroConstants.HERO_CHIEF_STATU) ActionFactory.getInstance().getHeroCommand().dischargeChief(castle.id);
+						return hero;
+					}
 				}
 			}
 			return null;
@@ -2215,7 +2232,7 @@ package scripts.jobQueue.script
 
 		// select a hero for training
 		private function getHeroForNPC() : HeroBean { 
-			if (npcHeroes != null) return getHeroForNPCFromList(npcHeroes);
+			if (npcHeroes != null) return getIdleHeroFromList(npcHeroes);
 			
 			var config:int = getConfig(CONFIG_HERO);
 			var pBest:HeroBean = bestPoliticsHero();
@@ -2269,7 +2286,7 @@ package scripts.jobQueue.script
 		}
 
 		private function getHeroForNPC10() : HeroBean {
-			if (npc10Heroes != null) return getHeroForNPCFromList(npc10Heroes);
+			if (npc10Heroes != null) return getIdleHeroFromList(npc10Heroes);
 			var trainingHero:HeroBean = (trainingHeroNeeded) ? getTrainingHero() : null;			
 			var bestAttack:HeroBean = bestAttackHero();
 			if (trainingHero == bestAttack) return null;
@@ -2314,6 +2331,8 @@ package scripts.jobQueue.script
 		}
 		
 		private function getSpammingHero() : HeroBean {
+			if (spamHeroes != null) return getIdleHeroFromList(spamHeroes);
+			
 			var worst:HeroBean = null;
 			var worstScore:int = -10000;
 
@@ -2962,10 +2981,11 @@ package scripts.jobQueue.script
 		// contains at most maxInQueue batches
 		private function estimatePopulationNeededForTraining(maxInQueue:int, targetTime:int) : int {
 			var total:int = 0;
-			var archerTime:int = 350; // avoid using conditionBean.time
 			var hero:HeroBean = bestIdleAttackHero();
-			var level:int = getTechLevel(TechConstants.TRAIN_SKILL);
-			var townFactor:Number = (1+0.01*((hero == null) ? 1 : hero.power)) * (1+0.1*level);
+			var trainLevel:int = getTechLevel(TechConstants.TRAIN_SKILL);
+			var heroPower:int = (hero == null) ? 0 : hero.power;
+			var archerTime:Number = 350*Math.pow(0.9, trainLevel) * Math.pow(0.995, heroPower);
+
 			var conditionBean:ConditionBean = getConditionBeanForTroop(TFConstants.T_ARCHER);
 			var reservedBarrack:BuildingBean = getReservedBarrack();
 
@@ -2980,7 +3000,7 @@ package scripts.jobQueue.script
 				var curQueueSize:int = (maxInQueue == 2) ? barrackBean.allProduceQueueArray.length : Math.max(2, barrackBean.allProduceQueueArray.length);
 				if (Math.min(maxQueueSize, maxInQueue) <= curQueueSize) continue;
 				if (getConfig(CONFIG_DEBUG) == DEBUG_POPULATION) logMessage("Estimate: build troop on barrack at " + barrackBean.positionId + " from pos " + curQueueSize + " to " + Math.min(maxQueueSize, maxInQueue));
-				total += (Math.min(maxQueueSize, maxInQueue) - curQueueSize) * targetTime / archerTime * townFactor;
+				total += (Math.min(maxQueueSize, maxInQueue) - curQueueSize) * targetTime / archerTime;
 			}
 
 			total = Math.min(total, 
@@ -3054,8 +3074,9 @@ package scripts.jobQueue.script
 
 			var randOrder:Array = Utils.randOrder(buildings.length);
 			var hero:HeroBean = bestIdleAttackHero();
-			var level:int = getTechLevel(TechConstants.TRAIN_SKILL);
-			var townFactor:Number = (1+0.01*((hero == null) ? 0 : hero.power)) * (1+0.1*level);
+			var trainLevel:int = getTechLevel(TechConstants.TRAIN_SKILL);
+			var heroPower:int = (hero == null) ? 0 : hero.power;
+			var townFactor:Number = 1 / (Math.pow(0.9, trainLevel) * Math.pow(0.995, heroPower));
 			
 			for (var i:int = 0; i < randOrder.length; i++) {
 				building = buildings[ randOrder[i] ];
@@ -3132,9 +3153,9 @@ package scripts.jobQueue.script
 			adjustIdlePeopleAvailable(estPopNeeded);
 			
 			if (getConfig(CONFIG_DEBUG) == DEBUG_POPULATION) logMessage("est population: " + estResource.curPopulation + ", est worker: " + estResource.workPeople);
-			
-			var level:int = getTechLevel(TechConstants.TRAIN_SKILL);
-			var townFactor:Number = (1+0.01*bestHero.power) * (1+0.1*level);
+
+			var trainLevel:int = getTechLevel(TechConstants.TRAIN_SKILL);
+			var townFactor:Number = 1 / (Math.pow(0.9, trainLevel) * Math.pow(0.995, bestHero.power));
 			var estIdle:int = estResource.curPopulation - estResource.workPeople
 			if (estPopNeeded > estIdle && estIdle >= 100) {
 				townFactor *= (estIdle/estPopNeeded);
@@ -4815,7 +4836,7 @@ package scripts.jobQueue.script
 
 				doHealingTroops(true);
 				
-				if ((tr != null) && hasScoutBombBefore(enemyArmies[0].reachTime + 1000)) {
+				if ((tr != null) && hasScoutBombBefore(enemyArmies[0].reachTime + 2000)) {
 				 	if (troop.archer + friendlyTroop.archer < 300000 || fortification.arrowTower == 0) {			
 				 		if (castle.goOutForBattle) {
 					 		logMessage("scout bomb, close gate");
@@ -5287,6 +5308,20 @@ package scripts.jobQueue.script
 			// logMessage("List of heroes used for npc farming: " + npcHeroes.join(","));
 		}
 		
+		public function spamheroes(str:String) : void {
+			var arr:Array = str.toLowerCase().split(",");
+			
+			for each(var heroName:String in arr) {
+				var found:Boolean = false;
+				for each (var hero:HeroBean in heroes) {
+					if (hero.name.toLowerCase() == heroName) found = true;
+				}
+				if (!found) {
+					logMessage("Warning: hero " + heroName + " is not currently in this town");
+				}
+			}
+			spamHeroes = arr;
+		}		
 		public function npctroops(str:String) : Boolean {
 			var tr:TroopBean = CityState.getTroopsStatic(str);
 			if (tr == null) {
@@ -5700,13 +5735,16 @@ package scripts.jobQueue.script
 
 			var detail:MapCastleBean = Map.getDetailInfo(loyaltyAttackFieldId);
 			if (detail == null) return;
+			var fieldType:int = Map.getType(loyaltyAttackFieldId);
+			if (fieldType == -1) return;
+			
 			if (!detail.canOccupy || detail.state != 1) {
 				logMessage("CANNOT DO LOYALTY ATTACK ON " + Map.fieldIdToString(loyaltyAttackFieldId));
 				endloyaltyattack();
 				return;
 			}
 			
-			if (Map.getType(loyaltyAttackFieldId) != FieldConstants.TYPE_CASTLE) {
+			if (fieldType != FieldConstants.TYPE_CASTLE) {
 				logMessage("Loyalty attack target is not a castle: " + Map.fieldIdToString(loyaltyAttackFieldId));
 				endloyaltyattack();
 				return;				
@@ -6608,17 +6646,19 @@ package scripts.jobQueue.script
 					} else {
 						addFortificationsGoal(fr);
 					}
-				} else if (args[0] == "npctroop") {
+				} else if (args[0] == "npctroop" || args[0] == "npctroops") {
 					if (!npctroops(args[1])) {
 						good = false;
 					}
 				} else if (args[0] == "npcheroes") {
 					npcheroes(args[1]);		
+				} else if (args[0] == "spamheroes") {
+					spamheroes(args[1]);	
 				} else if (args[0] == "valleytroop" || args[0] == "valleytroops") {
 					if (!valleytroops(args[1])) {
 						good = false;
 					}
-				} else if (args[0] == "npc10troop") {
+				} else if (args[0] == "npc10troop" || args[0] == "npc10troops") {
 					if (!npc10troops(args[1])) {
 						good = false;
 					}
@@ -6638,7 +6678,7 @@ package scripts.jobQueue.script
 					trainingHeroName = args[1];
 					trainingHeroNeeded = true;
 				} else {
-					logMessage("Error: " + args[0] + " must be among build, research, config, ballsused, troop, fortification, npclist, npctroop, npcheroes, npc10list, npc10troop, npc10heroes, valleytroop, huntingpos, traininghero, nexttrainingpos");
+					logMessage("Error: " + args[0] + " must be among build, research, config, ballsused, troop, fortification, npclist, npctroops, npcheroes, npc10list, npc10troops, npc10heroes, valleytroop, huntingpos, traininghero, nexttrainingpos, spamheroes");
 					good = false;
 				}
 			}

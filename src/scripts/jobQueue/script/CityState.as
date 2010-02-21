@@ -224,12 +224,51 @@ package scripts.jobQueue.script
 			onCommandFinished(true);
 		}
 		
+		public function npctroop(str:String) : void { npctroops(str); }
 		public function npctroops(str:String) : void {
 			currentAction = "npctroops";
 			cityManager.npctroops(str);
 			onCommandFinished(true);
 		}
+
+		public function npcheroes(str:String) : void {
+			currentAction = "npcheroes";
+			cityManager.npcheroes(str);
+			onCommandFinished(true);
+		}
 		
+		public function npc10list(str:String) : void {
+			currentAction = "npc10list";
+			cityManager.npc10list(str);
+			onCommandFinished(true);			
+		}
+		
+		public function npc10troop(str:String) : void { npc10troops(str); }
+		public function npc10troops(str:String) : void {
+			currentAction = "npctroops";
+			cityManager.npctroops(str);
+			onCommandFinished(true);
+		}
+
+		public function npc10heroes(str:String) : void {
+			currentAction = "npc10heroes";
+			cityManager.npc10heroes(str);
+			onCommandFinished(true);
+		}
+		
+		public function spamheroes(str:String) : void {
+			currentAction = "spamheroes";
+			cityManager.spamheroes(str);
+			onCommandFinished(true);
+		}
+				
+		public function npclist(str:String) : void {
+			currentAction = "npclist";
+			cityManager.npclist(str);
+			onCommandFinished(true);			
+		}
+
+		public function valleytroop(str:String) : void { valleytroops(str); }			
 		public function valleytroops(str:String) : void {
 			currentAction = "valleytroops";
 			cityManager.valleytroops(str);
@@ -242,13 +281,11 @@ package scripts.jobQueue.script
 			cityManager.huntingpos(coords);
 			onCommandFinished(true);			
 		}
-				
-		public function npcheroes(str:String) : void {
-			currentAction = "npcheroes";
-			cityManager.npcheroes(str);
-			onCommandFinished(true);
+		public function npc10limit(str:String) : void {
+			currentAction = "npc10limit";
+			cityManager.npc10limit(str);
+			onCommandFinished(true);			
 		}
-		
 		public function abandontown() : void
 		{
 			currentAction = "abandontown";

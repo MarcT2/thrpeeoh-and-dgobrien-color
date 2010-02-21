@@ -126,10 +126,10 @@
 	        	
 	        	var date:Date = new Date();
 	        	date.setTime(Utils.getServerTime());
-	        	appendToTextArea(logs, " Logged in successfully, server time lag: " + int(Utils.getServerLagTime()/1000) + "s");
+	        	appendToTextArea(logs, " Logged in successfully, server time difference: " + (Utils.getServerLagTime()/1000) + "s");
 	        	if (Math.abs(Utils.getServerLagTime()) > 5000) {	// more than 5s lag
-	        		appendToTextArea(logs, "YOU MAY WISH TO ADJUST YOUR COMPUTER TIME TO AVOID CONFUSION");
-	        		appendToTextArea(logs, "Current computer time: " + new Date().toLocaleTimeString());
+	        		appendToTextArea(logs, "Your current computer time: " + new Date().toLocaleTimeString());
+	        		appendToTextArea(logs, "YOU MAY ADJUST YOUR COMPUTER CLOCK TO AVOID CONFUSION, BUT BE SURE TO CLICK ON REFRESH IF YOU DO.");
 	        	}
 	        	parseCities(currentPlayer.castlesArray.toArray(), currentPlayer);
 	        		        	
