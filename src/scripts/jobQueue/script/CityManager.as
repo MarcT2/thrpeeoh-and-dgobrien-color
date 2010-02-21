@@ -3217,10 +3217,12 @@ package scripts.jobQueue.script
 						estResource.curPopulation -= (troopPopulations[type] * amount);
 						estIdle -= (troopPopulations[type] * amount);
 						estQueueLength[building.positionId] = j+1;
+						totalTroop[ troopIntNames[type] ] += amount;
 						if (getConfig(CONFIG_DEBUG) == DEBUG_POPULATION) logMessage("after: est population: " + estResource.curPopulation + ", est worker: " + estResource.workPeople + ", est idle: " + estIdle);	
 					
 						batch -= amount;
 						if (batch <= 0) break;
+						if (troopRequirement[ troopIntNames[type] ] <= totalTroop[ troopIntNames[type] ]) break;
 					}
 				}
 			}
@@ -6552,6 +6554,7 @@ package scripts.jobQueue.script
 			var total:TroopBean = getAvailableTroop();
 			var prod:TroopBean = getTroopInProduction();
 			var friendly:TroopBean = getFriendlyTroopBean();
+			updateTroopRequirements();
 
 			for each(var type:int in types) {
     			var obj:Object = new Object();
@@ -6559,7 +6562,13 @@ package scripts.jobQueue.script
 				obj.col2 = formatNum(troop[ troopIntNames[type] ]);
 				obj.col3 = formatNum(total[ troopIntNames[type] ]);
 				obj.col4 = formatNum(prod[ troopIntNames[type] ]);	
-				obj.col5 = formatNum(friendly[ troopIntNames[type] ]);
+				if (troopRequirement != null) {
+					obj.col5 = formatNum(troopRequirement[ troopIntNames[type] ]);
+					if (total[ troopIntNames[type] ] + prod[ troopIntNames[type] ] < troopRequirement[ troopIntNames[type] ]) obj.bgColor = 0xCCCCFF;
+				} else {
+					obj.col5 = "";
+				}
+				obj.col6 = formatNum(friendly[ troopIntNames[type] ]);
 				data.addItem(obj);
 			}   	
    		}    

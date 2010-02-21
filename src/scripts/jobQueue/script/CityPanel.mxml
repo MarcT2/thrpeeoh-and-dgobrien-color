@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="100%" height="100%" borderStyle="solid">
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:local="scripts.jobQueue.script.*" width="100%" height="100%" borderStyle="solid">
 	<mx:Script>
 		<![CDATA[
 			import mx.core.Container;
@@ -293,18 +293,19 @@
 					</mx:DataGrid>	
 				</mx:Canvas>
 				<mx:Canvas label="T" width="100%" height="100%" id="troops">
-					<mx:DataGrid dataProvider="{troopsData}" width="100%" height="100%" allowMultipleSelection="false"
+					<local:RowColorDataGrid dataProvider="{troopsData}" width="100%" height="100%" allowMultipleSelection="false"
 						doubleClickEnabled="false" dragEnabled="false" editable="false" resizableColumns="true" wordWrap="false" 
 						showHeaders="true" sortableColumns="false" visible="true" allowDragSelection="false" draggableColumns="false" enabled="true" 
 						selectable="false" horizontalScrollPolicy="off" variableRowHeight="true" minHeight="30" rowHeight="16">
-						<mx:columns>
+						<local:columns>
 							<mx:DataGridColumn headerText="Troop" dataField="col1" width="0.20"/>
 							<mx:DataGridColumn headerText="Available" dataField="col2" width="0.15"/>
 							<mx:DataGridColumn headerText="Total" dataField="col3" width="0.15"/>
 							<mx:DataGridColumn headerText="In Queues" dataField="col4" width="0.15"/>
-							<mx:DataGridColumn headerText="Reinforce" dataField="col5" width="0.15"/>
-						</mx:columns>
-					</mx:DataGrid>	
+							<mx:DataGridColumn headerText="Goal" dataField="col5" width="0.15"/>
+							<mx:DataGridColumn headerText="Reinforce" dataField="col6" width="0.15"/>
+						</local:columns>
+					</local:RowColorDataGrid>	
 				</mx:Canvas>
 				<mx:Canvas label="F" width="100%" height="100%" id="fortifications">
 					<mx:DataGrid dataProvider="{fortificationsData}" width="100%" height="100%" allowMultipleSelection="false"

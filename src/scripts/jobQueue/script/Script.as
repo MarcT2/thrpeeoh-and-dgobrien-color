@@ -484,6 +484,11 @@ package scripts.jobQueue.script
 					handled = true;
 					complete = true;
 					break;
+				default:
+					logMessage(err.message);
+					handled = true;
+					complete = true;
+					break;				
 			}
 
 			if (runAgain)

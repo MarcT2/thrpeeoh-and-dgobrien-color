@@ -263,6 +263,7 @@
                 	var minutes:String = Utils.getStringBetween(msg, "due in ", " minutes");
                 	if (minutes != null && Utils.isNumeric(minutes) && int(minutes) <= 5) {
 						ensurePauseQueue(Utils.rand(20*60*1000, 30*60*1000)); // 20-30 min
+						logMessage("Click on Resume to resume the program. Make sure you don't resume when the server is down, though.");
                 	}
                 } else {
                 	appendToTextArea(wChatText, "SYSTEM: " + msg);
