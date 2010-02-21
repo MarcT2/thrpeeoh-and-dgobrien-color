@@ -4824,6 +4824,16 @@ package scripts.jobQueue.script
 			}	
 			return false;
 		}
+
+		private function hasRealAttackBefore(endtime:Number) : Boolean {
+			for (var i:int = 0; i < enemyArmies.length; i++) {
+				var army:ArmyBean = enemyArmies[i];
+				if (army.reachTime > endtime) return false;
+				if (isJunkTroop(army.troop)) continue;
+				if (!isScoutBombTroop(army.troop)) return true;
+			}	
+			return false;
+		}
 		
 		private function handleGateControl() : void {
 			if (getConfig(CONFIG_GATE) <= 0) return;
@@ -4849,7 +4859,7 @@ package scripts.jobQueue.script
 				doHealingTroops(true);
 				
 				if ((tr != null) && hasScoutBombBefore(enemyArmies[0].reachTime + 2000)) {
-				 	if (troop.archer + friendlyTroop.archer < 300000 || fortification.arrowTower == 0) {			
+				 	if (troop.archer + friendlyTroop.archer < 250000 || !hasRealAttackBefore(enemyArmies[0].reachTime + 2000) || fortification.arrowTower == 0) {			
 				 		if (castle.goOutForBattle) {
 					 		logMessage("scout bomb, close gate");
 							castle.goOutForBattle = false;

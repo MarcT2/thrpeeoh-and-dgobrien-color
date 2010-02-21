@@ -390,12 +390,7 @@
 					t2.setStyle('color','0x0');
 		    	}	  						
 
-				if (enemyArmies == null)
-				{
-					return;
-				} 
-				
-				if (enemyArmies.length > 0)
+				if (enemyArmies != null && enemyArmies.length > 0)
 				{	        		
 					for each (var army:ArmyBean in enemyArmies) 
 					{
