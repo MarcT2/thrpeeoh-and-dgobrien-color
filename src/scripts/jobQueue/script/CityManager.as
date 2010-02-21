@@ -54,6 +54,7 @@ package scripts.jobQueue.script
 		private static var CONFIG_FASTHERO:String = "fasthero";
 		private static var CONFIG_ABANDON:String = "abandon";
 		private static var CONFIG_WARREPORT:String = "warreport";
+		private static var CONFIG_ATTACKWARNING:String = "attackwarning";
 		
 		private static var DEBUG_POPULATION:int = 10;
 		private static var DEBUG_NPCATTACK:int = 11;
@@ -446,7 +447,7 @@ package scripts.jobQueue.script
 				CONFIG_NPC, CONFIG_NPCLIMIT, CONFIG_COMFORT, CONFIG_RESEARCH, CONFIG_BUILDING, CONFIG_TRADING,
 				CONFIG_FORTIFICATION, CONFIG_TROOP, CONFIG_HERO, CONFIG_HUNTING, CONFIG_HIDING,  
 				CONFIG_BUILDNPC, CONFIG_DEBUG, CONFIG_VALLEY, CONFIG_DUMPING, CONFIG_TRAINING, CONFIG_FASTHERO,
-				CONFIG_ABANDON, CONFIG_GATE, CONFIG_WARREPORT);
+				CONFIG_ABANDON, CONFIG_GATE, CONFIG_WARREPORT, CONFIG_ATTACKWARNING);
 			if (str == null) {
 				logError("Empty config, available: " + configNames.join(" "));
 				return false;
@@ -499,7 +500,12 @@ package scripts.jobQueue.script
 				logMessage("WARNING: warreport works only on the first town " + player.castlesArray[0].name + ", option disabled");
 				configs[CONFIG_WARREPORT] = 0;
 			}
-
+			
+			if (getConfig(CONFIG_ATTACKWARNING) > 0 && !isMainTown()) {
+				logMessage("WARNING: sound attack warning works only on the first town " + player.castlesArray[0].name + ", option disabled");
+				configs[CONFIG_ATTACKWARNING] = 0;
+			}
+			
 			if (getConfig(CONFIG_TRADING) > 0 && countBuilding(BuildingConstants.TYPE_MARKET, 1) == 0) {
 				logMessage("WARNING: trading is on with NO MARKET IN TOWN");
 			}
@@ -609,6 +615,10 @@ package scripts.jobQueue.script
 			return good;
 		}
 
+		public function getWarningStatus() : Boolean {
+			return (getConfig(CONFIG_ATTACKWARNING) > 0);
+		}
+		
 		private function getConfig(str:String) : Number {
 			if (configs[str] == undefined) return 0;
 			return configs[str];

@@ -3,6 +3,7 @@
 	creationComplete="init()" width="100%" height="100%" borderThickness="0" paddingBottom="0">
 	<mx:Script>
 		<![CDATA[
+			import mx.core.SoundAsset;
 			import com.umge.sovt.common.server.events.ChannelChatMsg;
 			import com.umge.sovt.common.server.events.WorldChatMsg;
 			import com.umge.sovt.common.server.events.SystemInfoMsg;
@@ -57,6 +58,20 @@
 	        private var lastChatUser:String = "";	   
 	        private var relays:Array = new Array();
 	        private var detailReport:Boolean = false;   
+
+            [Embed(source='../media/Warning.mp3')]
+            private var Attack_Sound:Class;
+            
+            [Embed(source='../media/More.mp3')]
+            private var Attack_Several_Sound:Class;
+            
+            [Embed(source='../media/Ended.mp3')]
+            private var Attack_Ended_Sound:Class;
+
+			private var attackSound:SoundAsset = new Attack_Sound() as SoundAsset;
+			private var attackSeveralSound:SoundAsset = new Attack_Several_Sound() as SoundAsset;
+			private var attackEndedSound:SoundAsset = new Attack_Ended_Sound() as SoundAsset;
+
 
 			public function init():void {
 				trace("Connecting to " + config.connection.server);
@@ -347,7 +362,7 @@
 					removeCity(city);
 	        	}
 	        }	        
-	        
+
 	        private function removeCity(city:CityState) : void {
 	        	for each(var object:Object in citiesViewStack.getChildren()) {
 	        		if (! (object is CityPanel)) continue;
@@ -360,12 +375,14 @@
 	        }
 	        
 			/**
-			 * When a city is under sttack, this changes the 
+			 * When a city is under *real* attack, this changes the 
 			 * color of the tab to red to indicate an incoming attack
 			 */ 
+			private var lastWarningStatus:Boolean = false;
 			private function processEnemyArmysUpdate(enemyArmies:ArrayCollection):void 
 			{
 				var city:String = "";
+				var newWarningStatus:Boolean = false;
 
 				// Attack has stopped
 				for each (var t2:Object in citiesTab.getChildren())
@@ -392,11 +409,29 @@
 			        	{
 			        		if (t1.label.toLowerCase() == sName.toLowerCase())
 			        		{
+			        			newWarningStatus = true;
 			        			t1.setStyle('color','0xff0000');			        			
 			        		}	
 			        	}
 			    	}		        	
 				}
+				
+				var firstCity:CityState = (cities.length > 0) ? cities[0] : null;
+				if (firstCity != null && firstCity.cityManager.getWarningStatus()) {
+					if (newWarningStatus) {
+						if (enemyArmies.length > 1) {
+							attackSeveralSound.play();
+						} else {
+							attackSound.play();
+						}
+					} else {
+						if (lastWarningStatus) {
+							attackEndedSound.play();
+						}
+					}
+				}
+				
+				lastWarningStatus = newWarningStatus;
 			}
 
 	        private function onEnemyArmysUpdate(msg:EnemyArmysUpdate):void 
