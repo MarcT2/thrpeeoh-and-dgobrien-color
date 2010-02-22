@@ -48,9 +48,11 @@ package scripts.jobQueue.script
 		}
 		
 		public static function formatTime(num:int) : String {
-			var hours:int = int(num / 3600);
+			var days:int = int(num / 3600 / 24);
+			var hours:int = int(num / 3600) % 24;
 			var minutes:int = int(num / 60) % 60;
 			var seconds:int = num % 60;
+			if (days > 0) return days + "d:" + hours + "h:" + format2(minutes) + "m:" + format2(seconds);
 			if (hours > 0) return hours + "h:" + format2(minutes) + "m:" + format2(seconds);
 			return format2(minutes) + "m:" + format2(seconds);			
 		}

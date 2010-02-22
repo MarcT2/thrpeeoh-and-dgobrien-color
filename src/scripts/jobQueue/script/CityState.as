@@ -927,77 +927,7 @@ package scripts.jobQueue.script
 		 */
 		public function findhero(keyStat:String="atk", minLevel:int=69, method:int=1) : void
 		{
-			// reset find hero if min level is 0
-			if (minLevel == 0)
-			{
-				CallbackParams.doneFindingHero = true;
-				CallbackParams.findingHero = false;
-				CallbackParams.findHeroCastleId = 0;
-			}
-
-			if (CallbackParams.findHeroCastleId > 0 && castle.id != CallbackParams.findHeroCastleId)
-			{
-				onCommandFinished(new ScriptError("Only one city at a time may use findHero", -9999));
-				return;
-			}
-
-			if (!CallbackParams.doneFindingHero)
-			{
-				onCommandFinished(new ScriptError("Already searching for hero", -9999));
-				return
-			}
-
-			CallbackParams.doneFindingHero = false;
-
-			var guild:BuildingBean = BuildSelectionPolicy.select("Feasting Hall", castle.buildingsArray.toArray());
-			var inn:BuildingBean = null;
-
-			CallbackParams.findHeroKeyStat = keyStat;
-			CallbackParams.findHeroMinLevel = minLevel;
-			CallbackParams.findHeroMethod = method;
-
-			if (guild.level == castle.herosArray.length)
-			{
-				onCommandFinished(new ScriptError("Not enough room in Feasting Hall", -9999));
-				return;
-			}
-
-			inn = BuildSelectionPolicy.select("inn", castle.buildingsArray.toArray());
-
-			if (inn == null)
-			{
-				onCommandFinished(new ScriptError("No inn in city", -9999));
-				return;
-			}
-
-			if (inn.level > 4)
-			{
-				onCommandResult("High level inn detected.  It's advised to use a low level inn with findHero", "");
-			}
-
-			var findHeroTimer:Timer = new Timer(2500);
-
-			findHeroTimer.addEventListener(TimerEvent.TIMER,
-				function (e:TimerEvent) : void
-				{					
-					if (CallbackParams.findingHero)
-					{
-						return;
-					}
-
-					CallbackParams.findHeroCastleId = castle.id;
-					ActionFactory.getInstance().getHeroCommand().getHerosListFromTavern(castle.id);
-
-					if (CallbackParams.doneFindingHero || castle.resource.gold < 50000)
-					{
-						onCommandResult("Stopping find hero");
-						findHeroTimer.stop();
-						CallbackParams.findingHero = false;
-					}
-				});
-
-			findHeroTimer.start();
-			onCommandResult("Find hero background task started.  Will continue until feasting hall is full of desired heroes", "");
+			onCommandResult("findhero requires exclusive control of all Inns while running and must be disabled in AutoEvony, see Issue 66.");
 			onCommandFinished(true);
 		}
 

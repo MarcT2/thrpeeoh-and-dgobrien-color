@@ -1677,12 +1677,25 @@ package scripts.jobQueue.script
 				9*tr.archer + 18*tr.lightCavalry + 35*tr.heavyCavalry + 10*tr.carriage +
 				50*tr.ballista + 100*tr.batteringRam + 250*tr.catapult;
 		}
-		
-		private function getFoodConsume(newArmy:NewArmyParam) : Number {
+
+		// return time from start to target field in seconds
+		// relief station is not relevant in this calculation
+		public function getAttackTravelTime(startField:int, targetField:int, troop:TroopBean) : Number {
+			var distance:Number = Map.fieldDistance(startField, targetField);
+			var speed:Number = getTroopSpeed(troop);
+			if (speed == 0) return 0;			// nothing in troop or research is not available yet
+			return distance * 60000 / speed;
+		}
+
+		private function getTravelTime(newArmy:NewArmyParam) : Number {
 			var travelTime:Number = getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops);
 			if (newArmy.missionType == ObjConstants.ARMY_MISSION_SEND || newArmy.missionType == ObjConstants.ARMY_MISSION_TRANS) travelTime = travelTime / (1+0.1*getBuildingLevel(BuildingConstants.TYPE_TRANSPORT_STATION));
 			travelTime = travelTime + newArmy.restTime
-			return getFoodConsumeRate(newArmy.troops)*2*travelTime/3600;
+			return travelTime;
+		}
+		
+		private function getFoodConsume(newArmy:NewArmyParam) : Number {
+			return getFoodConsumeRate(newArmy.troops)*2*getTravelTime(newArmy)/3600;
 		}
 		
 		private function handleSearchTradeResponse(response:SearchTradesResponse):void {
@@ -3029,6 +3042,8 @@ package scripts.jobQueue.script
 			var building:BuildingBean;
 			var troopCond:ConditionBean;
 			var resName:String;
+			
+			if (researches == null) return false; 	// town not ready yet
 			if (troopProduceQueue == null) return false;
 			if (troopRequirement == null) return false;
 
@@ -3150,6 +3165,7 @@ package scripts.jobQueue.script
 			var resName:String;
 			var promoted:Boolean = false;
 
+			if (researches == null) return false; 	// town not ready yet
 			if (troopRequirement == null) return false;
 			if (getConfig(CONFIG_DUMPING) <= 0) return false;
 			if (troopProduceQueue == null) return false;
@@ -4230,7 +4246,7 @@ package scripts.jobQueue.script
 									
 			npcLocations.push(fieldInfo.id);
 			logMessage("Attack flat " + Map.fieldIdToString(fieldInfo.id) + " for npc with " + troops.archer + " archers " +
-				Utils.formatTime(getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops)));
+				Utils.formatTime(getTravelTime(newArmy)));
 			ActionFactory.getInstance().getArmyCommands().newArmy(castle.id, newArmy);
 			updateEstResourceForArmy(newArmy);
 			Map.updateDetailInfo(fieldInfo.id);
@@ -4381,7 +4397,7 @@ package scripts.jobQueue.script
 			if (!hasResourceForArmy(newArmy)) return false;
 			
 			logMessage("Attack field " + Map.fieldIdToString(fieldInfo.id) + " for city with " + troops.archer + " archers " +
-				Utils.formatTime(getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops)));
+				Utils.formatTime(getTravelTime(newArmy)));
 			ActionFactory.getInstance().getArmyCommands().newArmy(castle.id, newArmy);
 			updateEstResourceForArmy(newArmy);
 			Map.updateDetailInfo(fieldInfo.id);
@@ -4533,7 +4549,7 @@ package scripts.jobQueue.script
 				}
 				
 				logMessage(((training) ? "train at " : "attack NPC ") + Map.fieldIdToString(fieldId) + " with hero " + heroToString(hero) + " and " + troopBeanToString(newArmy.troops) +
-					Utils.formatTime(getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops)));
+					Utils.formatTime(getTravelTime(newArmy)));
 				ActionFactory.getInstance().getArmyCommands().newArmy(castle.id, newArmy, handleArmyCommandResponse);				
 				updateEstResourceForArmy(newArmy);
 				Map.updateInfo(fieldId);
@@ -4600,7 +4616,7 @@ package scripts.jobQueue.script
 				if (!playerTimingAllowed("attack" + fieldId, 8*3600)) continue;
 				
 				logMessage("attack NPC10 " + Map.fieldIdToString(fieldId) + " with hero " + heroToString(hero) + " and " + troopBeanToString(newArmy.troops) +
-					Utils.formatTime(getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops)));
+					Utils.formatTime(getTravelTime(newArmy)));
 				ActionFactory.getInstance().getArmyCommands().newArmy(castle.id, newArmy, handleArmyCommandResponse);				
 				updateEstResourceForArmy(newArmy);
 				Map.updateInfo(fieldId);
@@ -4707,7 +4723,7 @@ package scripts.jobQueue.script
 			if (!hasResourceForArmy(newArmy)) return false;
 				
 			logMessage("attack local field " + Map.fieldIdToString(targetField) + " with hero " + heroToString(hero) + " and " + troopBeanToString(tr) + " " +
-				Utils.formatTime(getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops)));		
+				Utils.formatTime(getTravelTime(newArmy)));		
 			ActionFactory.getInstance().getArmyCommands().newArmy(castle.id, newArmy, handleArmyCommandResponse);				
 			updateEstResourceForArmy(newArmy);
 			Map.updateDetailInfo(targetField);
@@ -4759,7 +4775,7 @@ package scripts.jobQueue.script
 				if (!hasResourceForArmy(newArmy)) return false;
 				
 				logMessage("attack field " + Map.fieldIdToString(fieldInfo.id) + " for resource with hero " + hero.name + " and " + tr.archer + " archers, " + tr.militia + " militia " +
-					Utils.formatTime(getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops)));
+					Utils.formatTime(getTravelTime(newArmy)));
 				ActionFactory.getInstance().getArmyCommands().newArmy(castle.id, newArmy, handleArmyCommandResponse);				
 				updateEstResourceForArmy(newArmy);
 				Map.updateDetailInfo(fieldInfo.id);
@@ -5009,8 +5025,10 @@ package scripts.jobQueue.script
 			var newArmy:NewArmyParam = new NewArmyParam();
 			newArmy.troops = new TroopBean();
 			newArmy.troops.carriage = troop.carriage - 1;	// leave 1 for layering if need be
-			if (troop.ballista > 1) newArmy.troops.ballista = troop.ballista - 1;
 			
+			// when there are a lot of archers, leave ballista for defense
+			if (troop.archer >= 100000 && troop.ballista > 1) newArmy.troops.ballista = troop.ballista - 1;
+
 			// horses are terrible at defense
 			if (troop.heavyCavalry > 0) {
 				newArmy.troops.heavyCavalry = (troop.heavyCavalry >= 20) ? troop.heavyCavalry - 10 : troop.heavyCavalry - 1;
@@ -5242,14 +5260,16 @@ package scripts.jobQueue.script
 		private function handleEmergencyComfort() : void {
 			if (resource.support >= 40) return;
 
-			if (estResource.gold > resource.maxPopulation && cityTimingAllowed("comfort", 905)) {
+			// do not use estResource here -- estResource is not updated in real time
+			// we are more willing to take error when dealing with emergency situations
+			
+			if (resource.gold > resource.maxPopulation && cityTimingAllowed("comfort", 905)) {
 				logMessage("Do praying");
 				ActionFactory.getInstance().getInteriorCommands().pacifyPeople(castle.id, CityStateConstants.COMFORT_PRAY);
-				estResource.gold -= resource.maxPopulation;
 				return;
 			}
 
-			if (estResource.gold <= 0 && resource.curPopulation * resource.texRate / 100 < resource.herosSalary) {
+			if (resource.gold <= 0 && resource.curPopulation * resource.texRate / 100 < resource.herosSalary) {
 				// tax rate has to be set so that there is a positive gold flow
 				var newRate:int = resource.herosSalary * 100 / resource.curPopulation + 5;
 				if (newRate >= 100) {
@@ -5284,23 +5304,23 @@ package scripts.jobQueue.script
 			// there are still a lot of troop, let normal comfort procedure deal with the situation
 			// fighting will happen -- will handle later after fighting
 			if (resource.food.increaseRate < resource.troopCostFood) return;
-			if (estResource.gold <= 0) return;		// can't trade or do anything
+			if (resource.gold <= 0) return;		// can't trade or do anything
 			if (!marketReady()) return;
 
-			if (estResource.gold < resource.maxPopulation && cityTimingAllowed("comfort", 895, true)) {
-				var amount:Number = Math.max(estResource.food, estResource.wood, estResource.stone, estResource.iron);
+			if (resource.gold < resource.maxPopulation && cityTimingAllowed("comfort", 895, true)) {
+				var amount:Number = Math.max(resource.food.amount, resource.wood.amount, resource.stone.amount, resource.iron.amount);
 				// it's dangerous to compare floating points argggh.
-				var resType:int = (amount == estResource.food) ? 0 : (amount == estResource.wood) ? 1 : (amount == estResource.stone) ? 2 : 3;
+				var resType:int = (amount == resource.food.amount) ? 0 : (amount == resource.wood.amount) ? 1 : (amount == resource.stone.amount) ? 2 : 3;
 				var price:Number = sellPrice(resType);
-				var goldNeeded:Number = resource.maxPopulation + resource.herosSalary / 10 - estResource.gold + 1000;
-				var sellAmount:int = Math.min(goldNeeded/price*1.01, estResource.gold/0.01/price, amount);
+				var goldNeeded:Number = resource.maxPopulation + resource.herosSalary / 10 - resource.gold + 1000;
+				var sellAmount:int = Math.min(goldNeeded/price*1.01, resource.gold/0.01/price, amount);
 
 				if (cityTimingAllowed("emergencyselling", 30)) {
 					logMessage("Selling " + sellAmount + " " + resourceNames[resType] + "@" + price);
 					ActionFactory.getInstance().getTradeCommands().newTrade(
 						castle.id, resType, TradeConstants.TRADE_TYPE_SELL,
 						sellAmount, "" + price);
-					estResource.gold -= sellAmount*price*0.005;
+					resource.gold -= sellAmount*price*0.005;
 				}
 			}
 		}
@@ -5732,15 +5752,6 @@ package scripts.jobQueue.script
 		  	return total * (1 + 0.1 * getTechLevel(TechConstants.LOAD_TECH));
 		}
 		
-		// return time from start to target field in seconds
-		// relief station is not relevant in this calculation
-		public function getAttackTravelTime(startField:int, targetField:int, troop:TroopBean) : Number {
-			var distance:Number = Map.fieldDistance(startField, targetField);
-			var speed:Number = getTroopSpeed(troop);
-			if (speed == 0) return 0;			// nothing in troop or research is not available yet
-			return distance * 60000 / speed;
-		}
-		
 		private function countTroop(bean:TroopBean) : int {
 			var count:int = 0;
 			
@@ -5810,7 +5821,7 @@ package scripts.jobQueue.script
 			Map.updateInfo(loyaltyAttackFieldId);
 			
 			logMessage("Loyalty attack on " + Map.fieldIdToString(loyaltyAttackFieldId) + " with hero " + hero.name + " and " + newArmy.troops.lightCavalry + " cavalries " +
-				Utils.formatTime(getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops)));
+				Utils.formatTime(getTravelTime(newArmy)));
 			ActionFactory.getInstance().getArmyCommands().newArmy(castle.id, newArmy);
 			updateEstResourceForArmy(newArmy);
 		}
@@ -5864,7 +5875,7 @@ package scripts.jobQueue.script
 			if (!cityTimingAllowed("spamattack", 15)) return;
 						
 			logMessage("Spam attack on " + Map.fieldIdToString(spamAttackFieldId) + " with hero " + hero.name + " and " + troopBeanToString(spamTroopBean) + " " +
-				Utils.formatTime(getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops)));
+				Utils.formatTime(getTravelTime(newArmy)));
 			ActionFactory.getInstance().getArmyCommands().newArmy(castle.id, newArmy);
 			updateEstResourceForArmy(newArmy);
 			Map.updateDetailInfo(spamAttackFieldId);
@@ -6257,8 +6268,13 @@ package scripts.jobQueue.script
     		obj.label = "Tax collected: " + formatNum(resource.taxIncome) + 
     					"\nHero salary: " + formatNum(resource.herosSalary) +
     					"\nNet: " + formatNum(resource.taxIncome - resource.herosSalary);
-    		if (resource.taxIncome - resource.herosSalary < -1000) {
-    			obj.label += "\n\nRun out of gold in " + Utils.formatTime(-resource.gold / (resource.taxIncome - resource.herosSalary) * 3600) + " hours";
+    		if (resource.taxIncome - resource.herosSalary < 0) {
+    			var goldTime:Number = -resource.gold / (resource.taxIncome - resource.herosSalary) * 3600;
+    			obj.col4 = Utils.formatTime(goldTime);
+    			obj.label += "\n\nRun out of gold in " + obj.col4;
+    			if (goldTime < 24*3600) obj.bgColor = 0xFFCCCC;
+    		} else {
+    			obj.col4 = "";
     		}
     		data.addItem(obj);
 
@@ -6268,24 +6284,32 @@ package scripts.jobQueue.script
     		obj.label = "Rate: " + formatNum(resource.food.increaseRate) + 
     			"\nTroop food cost: " +formatNum(resource.troopCostFood) +
     			"\nNet: " + formatNum(resource.food.increaseRate - resource.troopCostFood);
-    		if (resource.food.increaseRate - resource.troopCostFood < -1000) {
-    			obj.label += "\n\nRun out of food in " + Utils.formatTime(-resource.food.amount / (resource.food.increaseRate - resource.troopCostFood) * 3600) + " hours";
-    		} 
+    		if (resource.food.increaseRate - resource.troopCostFood < 0) {
+    			var foodTime:Number = -resource.food.amount / (resource.food.increaseRate - resource.troopCostFood) * 3600;
+    			obj.col4 = Utils.formatTime(foodTime);
+    			obj.label += "\n\nRun out of food in " + obj.col4;
+    			if (foodTime < 24*3600) obj.bgColor = 0xFFCCCC;
+    		} else {
+    			obj.col4 = "";
+    		}
     		data.addItem(obj);
 
     		obj = new Object(); 
     		obj.col1 = "Lumber"; obj.col2 = formatNum(resource.wood.amount); 
     		obj.col3 = formatNum(resource.wood.increaseRate);
+    		obj.col4 = "";
     		data.addItem(obj);
 
     		obj = new Object(); 
     		obj.col1 = "Stone"; obj.col2 = formatNum(resource.stone.amount); 
     		obj.col3 = formatNum(resource.stone.increaseRate);
+    		obj.col4 = "";
     		data.addItem(obj);
 
     		obj = new Object(); 
     		obj.col1 = "Iron"; obj.col2 = formatNum(resource.iron.amount); 
     		obj.col3 = formatNum(resource.iron.increaseRate);
+    		obj.col4 = "";
     		data.addItem(obj);    		
     	} 
     	
@@ -6798,6 +6822,7 @@ package scripts.jobQueue.script
    		}
    		private function moveTrainingHero() : Boolean {
    			if (trainingHeroName == null || trainingHeroNeeded || trainingHeroNextStop == -1 || troop.scouter == 0) return false;
+			if (researches == null) return false; 	// town not ready yet
 			
 			var trainingHero:HeroBean = getTrainingHero();
 			if (trainingHero == null) return false;
@@ -6830,7 +6855,7 @@ package scripts.jobQueue.script
 			newArmy.resource = new ResourceBean();
 				
 			logMessage("Move training hero to " + Map.fieldIdToString(trainingHeroNextStop) + ", arriving in " +
-				Utils.formatTime(getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops)));		
+				Utils.formatTime(getTravelTime(newArmy)));		
 			if (trainingHero.status == HeroConstants.HERO_CHIEF_STATU) ActionFactory.getInstance().getHeroCommand().dischargeChief(castle.id);
 			ActionFactory.getInstance().getArmyCommands().newArmy(castle.id, newArmy, handleArmyCommandResponse);				
 			Map.updateDetailInfo(trainingHeroNextStop);
