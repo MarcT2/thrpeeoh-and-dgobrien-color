@@ -7,6 +7,16 @@ package scripts.jobQueue.script
 		public static function setServerTime(serverTime:Number) : void {
 			serverTimeAdjust = serverTime - new Date().getTime();
 		}
+		// similar to setServerTime, but the time source is only a guess
+		// time drifting is a big issue if we wish to let the bot to run for a long time
+		//   and to deal with cases when computer time is corrected while the bot is running
+		public static function adjustServerTime(serverTime:Number) : void {
+			var tmpServerTimeAdjust:Number = serverTime - new Date().getTime();
+			// cap the change at 5s
+			if (tmpServerTimeAdjust > 5000 + serverTimeAdjust) tmpServerTimeAdjust = 5000 + serverTimeAdjust;
+			if (tmpServerTimeAdjust < -5000 + serverTimeAdjust) tmpServerTimeAdjust = -5000 + serverTimeAdjust;
+			serverTimeAdjust = 0.9 * serverTimeAdjust + 0.1 * tmpServerTimeAdjust;
+		}
 		public static function getServerTime() : Number {
 			return new Date().getTime() + serverTimeAdjust;
 		}

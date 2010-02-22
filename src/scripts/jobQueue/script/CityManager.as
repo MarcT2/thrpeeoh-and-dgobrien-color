@@ -1993,6 +1993,23 @@ package scripts.jobQueue.script
 		private function updateSelfArmies(response:SelfArmysUpdate) : void {
 			selfArmies = response.armysArray;
 			heroUpdateNeeded = true;
+			if (isMainTown()) estimateServerTime(selfArmies);
+		}
+		
+		private static var ownArmiesSeen:Object = new Object();
+		private static function estimateServerTime(armies:ArrayCollection) : void {
+			var latest:ArmyBean = null;
+			for each (var army:ArmyBean in armies) {
+				if (ownArmiesSeen[army.armyId] != undefined) continue;
+				ownArmiesSeen[army.armyId] = new Date().getTime();
+				if (latest == null) {
+					latest = army;
+				} else if (latest.startTime < army.startTime) {
+					latest = army;
+				}
+			}
+			if (latest == null) return;
+			Utils.adjustServerTime(latest.startTime - 500);
 		}
 
 		private function updateEnemyArmies(response:EnemyArmysUpdate) : void {
@@ -4491,8 +4508,10 @@ package scripts.jobQueue.script
 			
 			var minLevel:int = getConfig(CONFIG_NPC);
 			var maxLevel:int = 5;
-			if (hero.power < 30 && maxLevel > 4) maxLevel = 4;
-			if (hero.power < 20 && maxLevel > 3) maxLevel = 3;
+			
+			// if npcHeroes is null, no safeguard is needed
+			if (npcHeroes != null && hero.power < 30 && maxLevel > 4) maxLevel = 4;
+			if (npcHeroes != null && hero.power < 20 && maxLevel > 3) maxLevel = 3;
 
 			if (getConfig(CONFIG_DEBUG) == DEBUG_NPCATTACK) {
 				logMessage("attack levels: " + minLevel + "," + maxLevel);
