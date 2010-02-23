@@ -209,7 +209,7 @@ package scripts.jobQueue.script
 						try {
 							packageSize = socket.readInt();
 						} catch (error:Error) {
-							dispatchEvent(new ScriptLogEvent("An error occurred while talking to the server (read object size). Reconnect..."));
+							dispatchEvent(new ScriptLogEvent("An error occurred while talking to the server (read package size). Reconnect..."));
 							closeHandler(null);
 							return;				
 						}	
@@ -239,16 +239,16 @@ package scripts.jobQueue.script
 						var obj:Object;
 						try {
 							obj = buffer.readObject();
-						} catch (error:RangeError) {
-							dispatchEvent(new ScriptLogEvent("An error occurred while talking to the server (read object). Reconnect..."));
+						} catch (error:Error) {
+							dispatchEvent(new ScriptLogEvent("An error occurred while talking to the server (convert object). Reconnect..."));
 							closeHandler(null);
 							return;
 						}
 						
-						if (!obj) {
-							dispatchEvent(new ScriptLogEvent("An error occurred while talking to the server (null object). Reconnect..."));
+						if (!obj || obj.cmd == undefined || obj.data == undefined) {
+							dispatchEvent(new ScriptLogEvent("An error occurred while talking to the server (invalid object). Reconnect..."));
 							closeHandler(null);
-							return;						
+							return;
 						}
 						
 						packageSize = -1;
@@ -257,8 +257,7 @@ package scripts.jobQueue.script
 				}
 			} catch(error:Error) {
 				dispatchEvent(new ScriptLogEvent("Unknown error reading data from server"));
-				trace(error.getStackTrace());
-				return;					
+				trace(error.getStackTrace());			
 			}
 			
 			busy = false;

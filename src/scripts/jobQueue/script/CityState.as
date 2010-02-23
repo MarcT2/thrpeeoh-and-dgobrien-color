@@ -268,6 +268,12 @@ package scripts.jobQueue.script
 			onCommandFinished(true);			
 		}
 
+		public function gatepolicy(str:String) : void {
+			currentAction = "gatepolicy";
+			cityManager.gatepolicy(str);
+			onCommandFinished(true);			
+		}
+
 		public function valleytroop(str:String) : void { valleytroops(str); }			
 		public function valleytroops(str:String) : void {
 			currentAction = "valleytroops";

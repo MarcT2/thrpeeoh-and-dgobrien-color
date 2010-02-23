@@ -59,6 +59,14 @@ package scripts.jobQueue.script
 		private static var DEBUG_POPULATION:int = 10;
 		private static var DEBUG_NPCATTACK:int = 11;
 		private static var DEBUG_WARREPORT:int = 12;
+		
+		private static var GATE_AUTO:int = 0;
+		private static var GATE_OPEN:int = 1;
+		private static var GATE_CLOSE:int = 2;
+		private static var GATE_PEACE:int = 0;
+		private static var GATE_ATTACK:int = 1;
+		private static var GATE_SCOUTBOMB:int = 2;
+		private static var GATE_MIXED:int = 3;
 
 		private static var resourceNames:Array = new Array("food", "lumber", "stone", "iron");
 		private static var resourceIntNames:Array = new Array("food", "wood", "stone", "iron", "gold");
@@ -80,7 +88,6 @@ package scripts.jobQueue.script
 			TFConstants.T_ARCHER, TFConstants.T_LIGHTCAVALRY, TFConstants.T_HEAVYCAVALRY,
 			TFConstants.T_CARRIAGE, TFConstants.T_BALLISTA, TFConstants.T_BATTERINGRAM, 
 			TFConstants.T_CATAPULT);
-
 
 		private var castle_captured:Boolean = false;
 		private var castle:CastleBean;
@@ -173,6 +180,7 @@ package scripts.jobQueue.script
 		private var trainingHeroName:String = null;
 		private var trainingHeroNextStop:int = -1;
 		private var trainingHeroNeeded:Boolean = true;
+		private var gateSettings:Array = new Array(0, 0, 0, 0);
 		
 		private function errorCaught(errorMsg:String) : void {
 			logMessage("Error: " + errorMsg);
@@ -4863,60 +4871,76 @@ package scripts.jobQueue.script
 			return false;
 		}
 		
+		private function setGate(state:Boolean, msg:String) : void {
+			if (state == castle.goOutForBattle) return;
+			logMessage(msg);
+			castle.goOutForBattle = state;
+			ActionFactory.getInstance().getArmyCommands().setArmyGoOut(castle.id, state);
+		}
+		
 		private function handleGateControl() : void {
 			if (getConfig(CONFIG_GATE) <= 0) return;
 			var friendlyTroop:TroopBean = getFriendlyTroopBean();
 			
 			var GATETIME:int = 60 * getConfig(CONFIG_GATE);
 			if (enemyArmies.length == 0 || (enemyArmies[0].reachTime != -1 && enemyArmies[0].reachTime - Utils.getServerTime() > GATETIME * 1000)) {
-				if (castle.goOutForBattle && troop.scouter + friendlyTroop.scouter < 100000) {
-					logMessage("Close gate to protect scouts");
-					castle.goOutForBattle = false;
-					ActionFactory.getInstance().getArmyCommands().setArmyGoOut(castle.id, false);
-				} else if (!castle.goOutForBattle && troop.scouter + friendlyTroop.scouter >= 100000) {
-					logMessage("Make sure gate is open to prevent scouting");
-					castle.goOutForBattle = true;
-					ActionFactory.getInstance().getArmyCommands().setArmyGoOut(castle.id, true);
+				if (gateSettings[GATE_PEACE] == GATE_CLOSE) {
+					setGate(false, "Close gate according to gate policy");
+				} else if (gateSettings[GATE_PEACE] == GATE_OPEN) {
+					setGate(true, "Open gate according to gate policy");
+				} else if (troop.scouter + friendlyTroop.scouter < 100000) {
+					setGate(false, "Auto close gate to protect scouts");
+				} else {
+					setGate(true, "Auto open gate to prevent scouting");
 				}
+				return;
 			}
 			
 			if (enemyArmies.length > 0 && enemyArmies[0].reachTime != -1 && enemyArmies[0].reachTime - Utils.getServerTime() < GATETIME * 1000) {
-				var tr:TroopStrBean = enemyArmies[0].troop;				
-				if (isJunkTroop(tr)) return;
-
 				doHealingTroops(true);
 				
-				if ((tr != null) && hasScoutBombBefore(enemyArmies[0].reachTime + 2000)) {
-				 	if (troop.archer + friendlyTroop.archer < 250000 || !hasRealAttackBefore(enemyArmies[0].reachTime + 2000) || fortification.arrowTower == 0) {			
-				 		if (castle.goOutForBattle) {
-					 		logMessage("scout bomb, close gate");
-							castle.goOutForBattle = false;
-							ActionFactory.getInstance().getArmyCommands().setArmyGoOut(castle.id, false);
-						}
+				var tr:TroopStrBean = enemyArmies[0].troop;	
+				if (tr == null) return;			
+				if (isJunkTroop(tr)) return;
+
+				var sb:Boolean = hasScoutBombBefore(enemyArmies[0].reachTime + 2000);
+				var at:Boolean = hasRealAttackBefore(enemyArmies[0].reachTime + 2000);
+				
+				if (sb && at) {
+					if (gateSettings[GATE_MIXED] == GATE_CLOSE) {
+						setGate(false, "mixed attacks, close gate according to gate policy");
+					} else if (gateSettings[GATE_MIXED] == GATE_OPEN) {
+						setGate(true, "mixed attacks, open gate according to gate policy");
+					} else if (troop.archer + friendlyTroop.archer < 250000 || fortification.arrowTower == 0) {
+						setGate(false, "mixed attacks, auto close gate");
 					} else {
-						if (!castle.goOutForBattle) {
-							logMessage("Make sure gate is open for fighting against scout bomb");
-							castle.goOutForBattle = true;
-							ActionFactory.getInstance().getArmyCommands().setArmyGoOut(castle.id, true);
-						}
+						setGate(true, "mixed attack, auto open gate");
 					}
-				} else {
-					var enemyCount:int = countTroopStrBean(tr);
-					if (resource.food.increaseRate < resource.troopCostFood || (enemyCount > 0 && friendlyTroop.archer > enemyCount)) {
-						if (!castle.goOutForBattle) {
-							logMessage("Make sure gate is open for fighting");
-							castle.goOutForBattle = true;
-							ActionFactory.getInstance().getArmyCommands().setArmyGoOut(castle.id, true);
-						}
-					} else if (fortification.arrowTower < 500) {					
-						if (castle.goOutForBattle) {
-							logMessage("Make sure gate is closed, too few archer towers to protect");
-							castle.goOutForBattle = false;
-							ActionFactory.getInstance().getArmyCommands().setArmyGoOut(castle.id, false);
+				} else if (sb) {
+					if (gateSettings[GATE_SCOUTBOMB] == GATE_CLOSE) {
+						setGate(false, "scout bomb, close gate according to gate policy");
+					} else if (gateSettings[GATE_SCOUTBOMB] == GATE_OPEN) {
+						setGate(true, "scout bomb, open gate according to gate policy");
+					} else {
+						setGate(false, "scout bomb, auto close gate");
+					}
+				} else if (at) {
+					if (gateSettings[GATE_ATTACK] == GATE_CLOSE) {
+						setGate(false, "regular attack, close gate according to gate policy");
+					} else if (gateSettings[GATE_ATTACK] == GATE_OPEN) {
+						setGate(true, "regular attack, open gate according to gate policy");
+					} else {
+						var enemyCount:int = countTroopStrBean(tr);
+						if (enemyCount > 0 && troop.archer + friendlyTroop.archer > enemyCount) {
+							logMessage("regular attack, auto open gate to fight");
+						} else if (resource.food.increaseRate < resource.troopCostFood && !hasTooMuchResource(1)) {
+							logMessage("regular attack, auto open gate to fight - low resource");
+						} else {
+							logMessage("regular attack, auto close gate to preserve troops");
 						}
 					}
 				}
-			}
+			}	
 		}
 			
 		private function handleEnemyArmies() : void {
@@ -5459,6 +5483,35 @@ package scripts.jobQueue.script
 			return true;
 		}
 
+		private function is012(str:String) : Boolean {
+			if (!Utils.isNumeric(str)) return false;
+			var num:Number = Number(str);
+			return (num == 0 || num == 1 || num == 2);
+		}
+		
+		public function gatepolicy(policy:String) : Boolean {
+			if (getConfig(CONFIG_GATE) <= 0) {
+				logMessage("Gate policy cannot be set when gate option is disabled");
+				return false;				
+			}
+
+			var arr:Array = policy.split(" ");
+			if (arr.length != 4) {
+				logMessage("Invalid policy, need 4 integers from 0 to 2");
+				return false;
+			} else {
+				for (var i:int = 0; i < 4; i++) {
+					if (!is012[arr[i]]) {
+						logMessage("Invalid policy, expecting integer from 0 to 2, get: " + arr[i]);
+						return false;
+					}
+				}
+			}
+			for (var j:int = 0; j < 4; j++) gateSettings[j] = int(arr[j]);
+			handleGateControl();
+			return true;
+		}
+		
 		public function npclist(str:String) : Boolean {
 			var arr:Array = str.toLowerCase().split(" ");
 			var good:Boolean = true;
@@ -6737,6 +6790,10 @@ package scripts.jobQueue.script
 					}
 				} else if (args[0] == "nexttrainingpos") {
 					if (!nexttrainingpos(args[1])) {
+						good = false;
+					}
+				} else if (args[0] == "gatepolicy") {
+					if (!gatepolicy(args[1])) {
 						good = false;
 					}
 				} else if (args[0] == "traininghero") {
