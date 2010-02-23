@@ -10,7 +10,7 @@ package scripts.jobQueue.script
 		// similar to setServerTime, but the time source is only a guess
 		// time drifting is a big issue if we wish to let the bot to run for a long time
 		//   and to deal with cases when computer time is corrected while the bot is running
-		public static function adjustServerTime(serverTime:Number) : void {
+		public static function setEstimatedServerTime(serverTime:Number) : void {
 			var tmpServerTimeAdjust:Number = serverTime - new Date().getTime();
 			// cap the change at 5s
 			if (tmpServerTimeAdjust > 5000 + serverTimeAdjust) tmpServerTimeAdjust = 5000 + serverTimeAdjust;

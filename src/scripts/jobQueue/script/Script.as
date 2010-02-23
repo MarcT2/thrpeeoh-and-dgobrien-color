@@ -690,24 +690,24 @@ package scripts.jobQueue.script
 		
 		private function loginRun() : void
 		{
-			var connection:EvonyConnection = EvonyConnectionSingleton.getInstance().getConnection();
-			if (connection.m_authenticated)
+			var connection:Connection = Connection.getInstance();
+			if (connection.authenticated)
 			{
 				logMessage("Already connected.  Call logoff before attempting to login");
 				notifyCommandFinish(true);
 				return;
 			}
 			
-			connection.m_reconnectTimer.delay = 30000;
+			connection.reconnectTimer.delay = 30000;
 			logMessage("Login - Attempting login");	
-			connection.m_reconnectTimer.start();
+			connection.reconnectTimer.start();
 			
 		}
 		
 		private function logoutRun() : void
 		{
-			var connection:EvonyConnection = EvonyConnectionSingleton.getInstance().getConnection();
-			connection.m_reconnectTimer.stop();
+			var connection:Connection = Connection.getInstance();
+			connection.reconnectTimer.stop();
 			connection.disconnect();
 			logMessage("Logout - Disconnected");
 		}
@@ -794,8 +794,7 @@ package scripts.jobQueue.script
 					return;
 				}
 
-				if ((!EvonyConnectionSingleton.getInstance().getConnection().paused)&&
-					(EvonyConnectionSingleton.getInstance().getConnection().m_authenticated)) {
+				if (!Connection.getInstance().paused && Connection.getInstance().authenticated) {
 					commandTimer.stop();
 					logMessage("Running line " + (m_curCommandIndex+1));
 					var command:ScriptCommand = getCurrentCommand();

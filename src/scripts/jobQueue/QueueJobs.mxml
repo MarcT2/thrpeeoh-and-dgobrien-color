@@ -75,7 +75,7 @@
 
 			public function init():void {
 				trace("Connecting to " + config.connection.server);
-				EvonyConnectionSingleton.init(
+				Connection.getInstance().init(
 					config.connection.username,
 					config.connection.password,
 					config.connection.server);
@@ -436,21 +436,21 @@
 	        
 	        private function pauseQueue() : void {
 	        	// Process pause request
-        		var conn:EvonyConnection = EvonyConnectionSingleton.getInstance().getConnection();
+        		var conn:Connection = Connection.getInstance();
 				conn.paused = (conn.paused == false);
 				pauseButton.label = conn.paused ? "Resume" : "Pause";
 				var date:Date = new Date();
 	        	logMessage(conn.paused ? "Pausing jobs" : "Resuming jobs");
 	        	
-	        	if (!conn.paused && !conn.m_authenticated) {
-	        		conn.m_reconnectTimer.stop();
+	        	if (!conn.paused && !conn.authenticated) {
+	        		conn.reconnectTimer.stop();
 	        		conn.connect();
 	        	}
 	        }
 
 	        private function refresh() : void {
 	        	// Process pause request
-        		var conn:EvonyConnection = EvonyConnectionSingleton.getInstance().getConnection();
+        		var conn:Connection = Connection.getInstance();
         		var paused:Boolean = conn.paused;
         		if (!paused) conn.paused = true;
 				conn.disconnect();
@@ -459,7 +459,7 @@
 	        }
 
 	        private function ensurePauseQueue(duration:Number) : void {
-        		var conn:EvonyConnection = EvonyConnectionSingleton.getInstance().getConnection();
+        		var conn:Connection = Connection.getInstance();
 				if (conn.paused) return;
 
 				logMessage("Pause job queues for " + Utils.formatTime(duration/1000));
@@ -469,7 +469,7 @@
 				timer.start();
 	        }
 	        private function ensureUnpauseQueue(event:TimerEvent) : void {
-	        	var conn:EvonyConnection = EvonyConnectionSingleton.getInstance().getConnection();
+	        	var conn:Connection = Connection.getInstance();
 	        	if (conn.paused) pauseQueue();
 	        }
 	        
@@ -754,12 +754,24 @@
         			}
 					logCommandMessage("===end search===");
         		} else if (command == "searchenemies") {
+        			if (arg == "") arg = "200";
+        			if (!Utils.isNumeric(arg)) {
+        				logCommandMessage("Usage: \\searchenemies maxtowns");
+        				return;
+        			}
+        			var maxTowns:int = int(arg);
         			var arr2:Array = Map.searchEnemyCastles(arg);
         			arr2.sort(sortByDistance);
         			logCommandMessage("===Enemy castles===");
+        			var count:int = 0;
         			for each(var castle2:MapCastleBean in arr2) {
+        				if (++count == maxTowns) break;
         				logCommandMessage(Map.fieldIdToString(castle2.id) + ", " + stateName(castle2.state) + ", " + (int(distanceToCastles(castle2.id)*100)/100) + " miles, " + castle2.name + " by " + castle2.userName + " " + castle2.allianceName + ", pres " + castle2.prestige + ", honor " + castle2.honor);
         			}
+        			if (arr2.length > 1000) 
+        				logCommandMessage("Warning: ONLY 1000 nearest enemy towns are shown, please use '\searchcastle alliance' instead");
+        			else if (count > 100) 
+        				logCommandMessage("Notice: You may want to restrict the search result, for example: \\searchenemies 20");
 					logCommandMessage("===end search===");
 
         		} else if (command == "listmail") {

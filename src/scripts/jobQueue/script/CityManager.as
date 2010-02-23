@@ -654,19 +654,22 @@ package scripts.jobQueue.script
 				handleFortificationProduction();
 			}
 
-			if (getConfig(CONFIG_TROOP) > 0) {
-				updateTroopRequirements();
-				handleTroopProduction();
-			}
-
 			if (getConfig(CONFIG_HERO) > 0) uplevelHeros();
 
-			if (getConfig(CONFIG_DUMPING) > 0) {
-				trainingHeroNeeded = handleDumpingResource();
-			} else {
-				trainingHeroNeeded = false;
+			if (getConfig(CONFIG_TROOP) > 0 && researches != null) {
+				updateTroopRequirements();
+				
+				var estPopNeeded:int = 0;
+				if (getConfig(CONFIG_TROOP) > 0) estPopNeeded += estimatePopulationNeededForTraining(2, 1800);
+				if (getConfig(CONFIG_DUMPING) > 0 && getTrainingHero() != null) estPopNeeded += estimatePopulationNeededForTraining(10, 3*3600*getConfig(CONFIG_DUMPING));
+				adjustIdlePeopleAvailable(estPopNeeded);
 			}
 
+			trainingHeroNeeded = false;
+			if (getConfig(CONFIG_TROOP) > 0) {
+				handleTroopProduction();
+				if (getConfig(CONFIG_DUMPING) > 0) trainingHeroNeeded = handleDumpingResource();
+			}
 			
 			if (getConfig(CONFIG_NPC) > 0) handleSearchNPCs();
 			if (getConfig(CONFIG_VALLEY) > 0) {
@@ -701,8 +704,8 @@ package scripts.jobQueue.script
 					timer.stop();
 					return;
 				}
-				if (EvonyConnectionSingleton.getInstance().getConnection().paused) return;
-				if (!EvonyConnectionSingleton.getInstance().getConnection().m_authenticated) return;
+				if (Connection.getInstance().paused) return;
+				if (!Connection.getInstance().authenticated) return;
 				if (!masterTimer.canSend(timeSlot)) return;
 			
 				manager();
@@ -718,7 +721,7 @@ package scripts.jobQueue.script
 					return;
 				}				
 				
-				if (!EvonyConnectionSingleton.getInstance().getConnection().m_authenticated) return;
+				if (!Connection.getInstance().authenticated) return;
 	
 				handleEnemyArmies();
 				doHealingTroops();				
@@ -726,7 +729,7 @@ package scripts.jobQueue.script
 					handleEmergencyComfort();
 				}
 
-				if (EvonyConnectionSingleton.getInstance().getConnection().paused) return;
+				if (Connection.getInstance().paused) return;
 	
 				handleLoyaltyAttack();
 				handleSpamAttack();
@@ -2009,7 +2012,7 @@ package scripts.jobQueue.script
 				}
 			}
 			if (latest == null) return;
-			Utils.adjustServerTime(latest.startTime - 500);
+			Utils.setEstimatedServerTime(latest.startTime - 500);
 		}
 
 		private function updateEnemyArmies(response:EnemyArmysUpdate) : void {
@@ -3027,6 +3030,7 @@ package scripts.jobQueue.script
 			var archerTime:Number = 350*Math.pow(0.9, trainLevel) * Math.pow(0.995, heroPower);
 
 			var conditionBean:ConditionBean = getConditionBeanForTroop(TFConstants.T_ARCHER);
+			if (conditionBean == null) return 0;
 			var reservedBarrack:BuildingBean = getReservedBarrack();
 
 			for (var i:int = 0; i < buildings.length; i++) {
@@ -3071,9 +3075,10 @@ package scripts.jobQueue.script
 				if (getConfig(CONFIG_DEBUG) > 0) logMessage("Not enough resource for troop production");
 				return false;
 			}
-
+			
 			var estPopNeeded:int = estimatePopulationNeededForTraining(2, 1800);
-			adjustIdlePeopleAvailable(estPopNeeded);
+			if (estPopNeeded == 0) return false;
+			if (getConfig(CONFIG_DEBUG) == DEBUG_POPULATION) logMessage("est population: " + estResource.curPopulation + ", est worker: " + estResource.workPeople);
 			
 			var totalTroop:TroopBean = getAvailableTroop();			
 			// add troop from production queue to totalTroop
@@ -3191,9 +3196,8 @@ package scripts.jobQueue.script
 			var bestHero:HeroBean = getTrainingHero();
 			if (bestHero == null) return false;
 
-			var factor:Number = getConfig(CONFIG_DUMPING);			
-			var estPopNeeded:int = estimatePopulationNeededForTraining(10, 3*3600*factor);
-			adjustIdlePeopleAvailable(estPopNeeded);
+			var estPopNeeded:int = estimatePopulationNeededForTraining(10, 3*3600*getConfig(CONFIG_DUMPING));
+			if (estPopNeeded == 0) return false;
 			
 			if (getConfig(CONFIG_DEBUG) == DEBUG_POPULATION) logMessage("est population: " + estResource.curPopulation + ", est worker: " + estResource.workPeople);
 
@@ -3221,7 +3225,7 @@ package scripts.jobQueue.script
 				if (troopCond == null) continue;
 
 				if (totalTroop[ troopIntNames[type] ] >= troopRequirement[ troopIntNames[type] ]) continue;
-				var maxBatch:int = factor * 3 * 3600 / troopTimes[type] * townFactor;
+				var maxBatch:int = getConfig(CONFIG_DUMPING) * 3 * 3600 / troopTimes[type] * townFactor;
 				maxBatch = int(maxBatch/10) * 10;
 				if (maxBatch < 10) maxBatch = 10;
 
@@ -3401,25 +3405,14 @@ package scripts.jobQueue.script
 			if (!spaceAvailableForFortification()) return false;
 
 			var prod:FortificationsBean = getFortificationsInProduction();
-			var types:Array = new Array(TFConstants.F_TRAP, TFConstants.F_ABATIS, TFConstants.F_ROLLINGLOGS, TFConstants.F_ROCKFALL);	
-			var batch:int = 10;
+			var types:Array = new Array(TFConstants.F_TRAP, TFConstants.F_ABATIS, TFConstants.F_ROLLINGLOGS, TFConstants.F_ROCKFALL, TFConstants.F_ARROWTOWER);	
+			var batch:int = 100;
 			for each (var type:int in types) {
 				if (canProduceFortification(type, batch) && spaceAvailableForFortification(batch) && fortification[ troopIntNames[type] ] + prod[ troopIntNames[type] ] < fortificationsRequirement[ troopIntNames[type] ]) {
-					if (getConfig(CONFIG_DEBUG) > 0) logMessage("Produce " + batch + " " + troopExtNames[type]);
+					if (getConfig(CONFIG_DEBUG) > 0) logMessage("Use spare resources for " + batch + " " + troopExtNames[type]);
 					ActionFactory.getInstance().getFortificationsCommands().produceWallProtect(castle.id, type, batch);					
 					return true;
 				}
-			}
-
-			// cannot or no need for other type of defense, now try to build archer towers
-			batch = 0;
-			while (canProduceFortification(TFConstants.F_ARROWTOWER, batch + 10) && spaceAvailableForFortification(batch + 10)) batch += 10;
-			
-			if (batch >= 200) {
-				if (batch > 200) batch = 200;		// build at most 200 AT at a time
-				logMessage("Use spare resources for " + batch + " archer towers");
-				ActionFactory.getInstance().getFortificationsCommands().produceWallProtect(castle.id, TFConstants.F_ARROWTOWER, batch);					
-				return true;
 			}
 			
 			return false;
@@ -4055,7 +4048,7 @@ package scripts.jobQueue.script
 		public function abandonCastle(other:CastleBean) : void {
 			if (!playerTimingAllowed("abandon" + other.id, 1000)) return;
 			logMessage("Abandon castle at " + Map.fieldIdToString(other.fieldId));
-			var pw:String = EvonyConnectionSingleton.getInstance().getConnection().getHashedPassword();
+			var pw:String = Connection.getInstance().getHashedPassword();
 			ActionFactory.getInstance().getCityCommands().giveupCastle(pw, other.id);
 			Map.updateDetailInfo(other.fieldId);
 			Map.updateInfo(other.fieldId);

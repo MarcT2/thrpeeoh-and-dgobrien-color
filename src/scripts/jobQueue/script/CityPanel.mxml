@@ -41,7 +41,7 @@
 	        	script.addEventListener(ScriptLogEvent.TYPE, queueJobs.onLog);
 	        	city.cityManager.addEventListener(ScriptLogEvent.TYPE, queueJobs.onLog);
 	        	script.addEventListener(Script.STOP, handleEndScript);
-	        	if (city.castle == city.player.castlesArray[0]) EvonyConnectionSingleton.getInstance().getConnection().addEventListener(ScriptLogEvent.TYPE, queueJobs.onLog);
+	        	if (city.castle == city.player.castlesArray[0]) Connection.getInstance().addEventListener(ScriptLogEvent.TYPE, queueJobs.onLog);
 	        	
 	        	addEventListener(FlexEvent.SHOW, updateAllInfo);
 	        	callLater(function():void {
