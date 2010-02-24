@@ -4508,7 +4508,7 @@ package scripts.jobQueue.script
 				logMessage("checking troop to attack npc, ballista: " + troop.ballista);
 			}
 
-			if (troop.ballista < 20) return false;
+			// if (troop.ballista < 20) return false;
 
 			var hero:HeroBean;
 			hero = getHeroForNPC();
@@ -4525,7 +4525,17 @@ package scripts.jobQueue.script
 			if (npcHeroes != null && hero.power < 20 && maxLevel > 3) maxLevel = 3;
 
 			if (getConfig(CONFIG_DEBUG) == DEBUG_NPCATTACK) {
-				logMessage("attack levels: " + minLevel + "," + maxLevel);
+				logMessage("attack levels: [" + minLevel + "," + maxLevel + "]");
+			}
+			
+			if (minLevel > maxLevel) return false;
+			
+			// quick check to see if there are enough troops
+			if (getTroopBeanForNPCLevel(minLevel, false) == null) {
+				if (getConfig(CONFIG_DEBUG) == DEBUG_NPCATTACK) {
+					logMessage("npc attack: Not enough troop");
+				}
+				return false;
 			}
 
 			// use preset npcList if given, otherwise use localNPCs
@@ -5501,7 +5511,7 @@ package scripts.jobQueue.script
 		
 		public function gatepolicy(policy:String) : Boolean {
 			if (getConfig(CONFIG_GATE) <= 0) {
-				logMessage("Gate policy cannot be set when gate option is disabled");
+				logMessage("Please set gatepolicy *after* setting gate config");
 				return false;				
 			}
 

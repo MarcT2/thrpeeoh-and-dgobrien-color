@@ -268,9 +268,9 @@ package scripts.jobQueue.script
 			onCommandFinished(true);			
 		}
 
-		public function gatepolicy(str:String) : void {
+		public function gatepolicy(peace:int, attack:int, sb:int, mixed:int) : void {
 			currentAction = "gatepolicy";
-			cityManager.gatepolicy(str);
+			cityManager.gatepolicy("" + peace + " " + attack + " " + sb + " " + mixed);
 			onCommandFinished(true);			
 		}
 
