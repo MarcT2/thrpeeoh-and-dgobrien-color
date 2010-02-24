@@ -5501,14 +5501,13 @@ package scripts.jobQueue.script
 				return false;
 			} else {
 				for (var i:int = 0; i < 4; i++) {
-					if (!is012[arr[i]]) {
+					if (!is012(arr[i])) {
 						logMessage("Invalid policy, expecting integer from 0 to 2, get: " + arr[i]);
 						return false;
 					}
 				}
 			}
 			for (var j:int = 0; j < 4; j++) gateSettings[j] = int(arr[j]);
-			handleGateControl();
 			return true;
 		}
 		
@@ -5974,32 +5973,35 @@ package scripts.jobQueue.script
 			}
 		}
 
-		
 		private function handleServerNewReport(response:NewReport) : void {
-			// only one should take care of the report, handle 5 reports at most per iteration
-			//   to avoid over load (and client hang -- why???)
 			if (!isMainTown()) return;
 			lastNewReport = response;
+			
+			// if a new report is read, server will send a new NewReport
+			// The code here is inefficient if user leaves unread reports behind read reports,
+			//   but it is not clear how to fix that
 			
 			if (response.army_count > 0) {
 				if (!playerTimingAllowed("getarmyreportlist", 2)) return;
 				ActionFactory.getInstance().getReportCommands().receiveReportList(1,5,ObjConstants.REPORT_TYPE_ARMY);
-				lastNewReport = null;
+				lastNewReport.army_count = 0;
 				return;
 			}
 
 			if (response.trade_count > 0) {
 				if (!playerTimingAllowed("gettradereportlist", 10)) return;
 				ActionFactory.getInstance().getReportCommands().receiveReportList(1,5,ObjConstants.REPORT_TYPE_TRADE);
-				lastNewReport = null;
+				lastNewReport.trade_count = 0;
 				return;
 			}
 			if (response.other_count > 0) {
 				if (!playerTimingAllowed("getotherreportlist", 10)) return;
 				ActionFactory.getInstance().getReportCommands().receiveReportList(1,5,ObjConstants.REPORT_TYPE_OTHER);
-				lastNewReport = null;
+				lastNewReport.other_count = 0;
 				return;
 			}
+			
+			lastNewReport = null;
 		}
 		
 		private function handleReceiveReportList(response:ReportListResponse) : void {
@@ -6565,6 +6567,13 @@ package scripts.jobQueue.script
     			
 				if (army.missionType == ObjConstants.ARMY_MISSION_OCCUPY) {
 					obj.col1 = "attack";
+					if (isJunkTroop(army.troop)) {
+						;
+					} else if (isScoutBombTroop(army.troop)) {
+						obj.bgColor = 0xE3EAFD;
+					} else {
+						obj.bgColor = 0xFDE3E3;
+					}
 				} else if (army.missionType == ObjConstants.ARMY_MISSION_SCOUT) {
 					obj.col1 = "scout";
 				} else {
@@ -6580,6 +6589,7 @@ package scripts.jobQueue.script
 					((army.troop != null) ? "\n" + troopStrBeanToString(army.troop) : "")+
 					((army.resource != null) ? "\n" + resourceToString(army.resource) : "") +
 					((army.reachTime != -1) ? "\nArrival: " + new Date(army.reachTime).toLocaleTimeString() : "");
+				
 				data.addItem(obj);
     		}
 
@@ -6737,6 +6747,9 @@ package scripts.jobQueue.script
 				} else if (args[0] == "npc10list") {
 					args.splice(0, 1);
 					if (!npc10list(args.join(" "))) good = false;
+				} else if (args[0] == "gatepolicy") {
+					args.splice(0, 1);
+					if (!gatepolicy(args.join(" "))) good = false;
 				} else if (args.length != 2) {
 					good = false;
 					logMessage("Invalid line: " + str);
@@ -6792,15 +6805,11 @@ package scripts.jobQueue.script
 					if (!nexttrainingpos(args[1])) {
 						good = false;
 					}
-				} else if (args[0] == "gatepolicy") {
-					if (!gatepolicy(args[1])) {
-						good = false;
-					}
 				} else if (args[0] == "traininghero") {
 					trainingHeroName = args[1];
 					trainingHeroNeeded = true;
 				} else {
-					logMessage("Error: " + args[0] + " must be among build, research, config, ballsused, troop, fortification, npclist, npctroops, npcheroes, npc10list, npc10troops, npc10heroes, valleytroop, huntingpos, traininghero, nexttrainingpos, spamheroes");
+					logMessage("Error: " + args[0] + " must be among build, research, config, ballsused, troop, fortification, npclist, npctroops, npcheroes, npc10list, npc10troops, npc10heroes, valleytroop, huntingpos, traininghero, nexttrainingpos, spamheroes, gatepolicy");
 					good = false;
 				}
 			}
@@ -6828,6 +6837,8 @@ package scripts.jobQueue.script
 			} else {
 				logMessage("Goals successfully set");
 			}
+			
+			handleGateControl();
    		}
    		
    		private var lastReportTime:Number = -1;
