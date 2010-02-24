@@ -2,6 +2,8 @@
 <mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" xmlns:local="scripts.jobQueue.script.*" width="100%" height="100%" borderStyle="solid">
 	<mx:Script>
 		<![CDATA[
+			import flash.utils.setTimeout;
+			import com.umge.sovt.client.action.ActionFactory;
 			import mx.core.Container;
 			import mx.events.FlexEvent;
 			import mx.events.IndexChangedEvent;
@@ -171,7 +173,34 @@
 			
 			private function setGoals() : void {
 				city.cityManager.setGoals(goalsTextArea.text);
-			}			
+			}
+			
+			public function abandonField(fieldId:int) : void {
+				queueJobs.logMessage("Abandon field: " + Map.fieldIdToString(fieldId));
+				ActionFactory.getInstance().getFieldCommand().giveUpField(fieldId);
+				setTimeout(city.cityManager.updateValleyData, 3000, valleyData);
+			}
+
+			public function recallSelfArmy(armyId:int) : void {
+				if (armyId == -1) return;
+				queueJobs.logMessage("Recall self army with armyId: " + armyId);
+				ActionFactory.getInstance().getArmyCommands().callBackArmy(city.castle.id, armyId);
+				setTimeout(city.cityManager.updateArmyData, 3000, armyData);
+			}
+			
+			public function recallFriendlyArmy(armyId:int) : void {
+				if (armyId == -1) return;
+				queueJobs.logMessage("Recall friendly army with armyId: " + armyId);
+				ActionFactory.getInstance().getArmyCommands().callBackArmy(city.castle.id, armyId);
+				setTimeout(city.cityManager.updateExtraTroopData, 3000, extraTroopData);
+			}
+
+			public function recallHero(heroId:int) : void {
+				queueJobs.logMessage("Recalling hero with heroId: " + heroId);
+				ActionFactory.getInstance().getHeroCommand().callBackHero(city.castle.id, heroId);
+				setTimeout(city.cityManager.updateHeroData, 3000, heroData);
+			}
+
 		]]>
 	</mx:Script>
 
@@ -244,6 +273,26 @@
 							<mx:DataGridColumn headerText="Type" dataField="col2" width="0.2"/>
 							<mx:DataGridColumn headerText="Level" dataField="col3" width="0.2"/>
 							<mx:DataGridColumn headerText="Distance" dataField="col4" width="0.2"/>
+							<mx:DataGridColumn headerText="Action" width="0.2">
+								<mx:itemRenderer>
+								<mx:Component>
+								<mx:VBox verticalGap="0" horizontalAlign="center">
+								<mx:Script>
+								<![CDATA[
+									private var lastTime:Number = 0;
+									private function abandonField(fieldId:int) : void {
+										if (new Date().getTime() < lastTime + 3000) return;
+										lastTime = new Date().getTime(); 
+										var cp:CityPanel = this.outerDocument as CityPanel;
+										if (cp != null) cp.abandonField(fieldId);
+									}
+								]]>
+								</mx:Script>
+								<mx:Button fontSize="10" id="abandonButton" label="Abandon" click="abandonField(data.col5)"/>
+								</mx:VBox>
+								</mx:Component>
+								</mx:itemRenderer>
+							</mx:DataGridColumn>
 						</mx:columns>
 					</mx:DataGrid>
 				</mx:Canvas>
@@ -256,6 +305,26 @@
 							<mx:DataGridColumn headerText="Hero" dataField="col1" width="0.2"/>
 							<mx:DataGridColumn headerText="Status" dataField="col2" width="0.2"/>
 							<mx:DataGridColumn headerText="Type" dataField="col3" width="0.3" showDataTips="true"/>
+							<mx:DataGridColumn headerText="Action" width="0.2">
+								<mx:itemRenderer>
+								<mx:Component>
+								<mx:VBox verticalGap="0" horizontalAlign="center">
+								<mx:Script>
+								<![CDATA[
+									private var lastTime:Number = 0;
+									private function recallHero(heroId:int) : void {
+										if (new Date().getTime() < lastTime + 3000) return;
+										lastTime = new Date().getTime(); 
+										var cp:CityPanel = this.outerDocument as CityPanel;
+										if (cp != null) cp.recallHero(heroId);
+									}
+								]]>
+								</mx:Script>
+								<mx:Button fontSize="10" id="recall" label="Recall" visible="{data.col4!=-1}" click="recallHero(data.col4)"/>
+								</mx:VBox>
+								</mx:Component>
+								</mx:itemRenderer>
+							</mx:DataGridColumn>
 						</mx:columns>
 					</mx:DataGrid>	
 				</mx:Canvas>
@@ -287,9 +356,29 @@
 						showHeaders="true" sortableColumns="false" visible="true" allowDragSelection="false" draggableColumns="false" enabled="true" 
 						selectable="false" horizontalScrollPolicy="off" variableRowHeight="true" minHeight="30" rowHeight="16">
 						<mx:columns>
-							<mx:DataGridColumn headerText="Army" dataField="col1" width="0.20"/>
+							<mx:DataGridColumn headerText="Army" dataField="col1" width="0.15"/>
 							<mx:DataGridColumn headerText="Target" dataField="col2" width="0.40" showDataTips="true"/>
-							<mx:DataGridColumn headerText="Remain time" dataField="col3" width="0.20"/>
+							<mx:DataGridColumn headerText="Remain time" dataField="col3" width="0.15"/>
+							<mx:DataGridColumn headerText="Action" width="0.15">
+								<mx:itemRenderer>
+								<mx:Component>
+								<mx:VBox verticalGap="0" horizontalAlign="center">
+								<mx:Script>
+								<![CDATA[
+									private var lastTime:Number = 0;
+									private function recallSelfArmy(armyId:int) : void {
+										if (new Date().getTime() < lastTime + 3000) return;
+										lastTime = new Date().getTime(); 
+										var cp:CityPanel = this.outerDocument as CityPanel;
+										if (cp != null) cp.recallSelfArmy(armyId);
+									}
+								]]>
+								</mx:Script>
+								<mx:Button fontSize="10" id="recall" label="Recall" visible="{data.col4!=-1}" click="recallSelfArmy(data.col4)"/>
+								</mx:VBox>
+								</mx:Component>
+								</mx:itemRenderer>
+							</mx:DataGridColumn>
 						</mx:columns>
 					</mx:DataGrid>	
 				</mx:Canvas>
@@ -342,6 +431,26 @@
 							<mx:DataGridColumn headerText="Extra troops" dataField="col1" width="0.20"/>
 							<mx:DataGridColumn headerText="From" dataField="col2" width="0.40" showDataTips="true"/>
 							<mx:DataGridColumn headerText="Remain time" dataField="col3" width="0.20"/>
+							<mx:DataGridColumn headerText="Action" width="0.2">
+								<mx:itemRenderer>
+								<mx:Component>
+								<mx:VBox verticalGap="0" horizontalAlign="center">
+								<mx:Script>
+								<![CDATA[
+									private var lastTime:Number = 0;
+									private function recallFriendlyArmy(armyId:int) : void {
+										if (new Date().getTime() < lastTime + 3000) return;
+										lastTime = new Date().getTime(); 
+										var cp:CityPanel = this.outerDocument as CityPanel;
+										if (cp != null) cp.recallFriendlyArmy(armyId);
+									}
+								]]>
+								</mx:Script>
+								<mx:Button fontSize="10" id="recall" label="Recall" visible="{data.col4!=-1}" click="recallFriendlyArmy(data.col4)"/>
+								</mx:VBox>
+								</mx:Component>
+								</mx:itemRenderer>
+							</mx:DataGridColumn>
 						</local:columns>
 					</local:RowColorDataGrid>	
 				</mx:Canvas>

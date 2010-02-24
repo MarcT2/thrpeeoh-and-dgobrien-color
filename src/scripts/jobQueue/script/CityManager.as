@@ -25,6 +25,7 @@ package scripts.jobQueue.script
 	import flash.utils.*;
 	
 	import mx.collections.ArrayCollection;
+	import mx.utils.ObjectProxy;
 
 	public class CityManager extends EventDispatcher
 	{
@@ -469,7 +470,7 @@ package scripts.jobQueue.script
 					good = false;
 				} else if (configNames.indexOf(subarr[0]) != -1) {
 					if (Utils.isNumeric(subarr[1])) {
-						if (configs[subarr[0]] != undefined) logMessage("Config value of " + subarr[0] + " is changed to " + subarr[1]);
+						if (configs[subarr[0]] != undefined) logMessage("Config value of " + subarr[0] + " is changed to " + subarr[1] + ", previous value discarded");
 						configs[subarr[0]] = Number(subarr[1]);
 					} else {
 						logError("Invalid numeric value for " + subarr[0] + ": " + subarr[1]);
@@ -2443,14 +2444,16 @@ package scripts.jobQueue.script
 			if (!masterTimer.canReceive(timeSlot)) return;
 			if (getConfig(CONFIG_HERO) <= 1) return;
 
+			var heroHired:Boolean = false;
 			for each(var hero:HeroBean in response.herosArray) {
 				if (attemptToHire(hero)) {
+					heroHired = true;
 					heroUpdateNeeded = true;
-					return;
+					break;
 				}
 			}
 			
-			if (heroUpdateNeeded && getConfig(CONFIG_FASTHERO) > 0 && masterTimer.canSend(timeSlot)) {
+			if (heroHired && getConfig(CONFIG_FASTHERO) > 0 && masterTimer.canSend(timeSlot)) {
 				if (countBuilding(BuildingConstants.TYPE_TAVERN, 1) > 0) {
 					ActionFactory.getInstance().getHeroCommand().getHerosListFromTavern(castle.id);
 				}
@@ -3231,16 +3234,19 @@ package scripts.jobQueue.script
 			var estQueueLength:Array = new Array();
 			var types:Array = new Array(TFConstants.T_BALLISTA, TFConstants.T_CARRIAGE, TFConstants.T_SWORDSMEN, TFConstants.T_PIKEMAN, TFConstants.T_LIGHTCAVALRY, TFConstants.T_HEAVYCAVALRY, TFConstants.T_PEASANTS, TFConstants.T_MILITIA, TFConstants.T_SCOUTER, TFConstants.T_ARCHER, TFConstants.T_BATTERINGRAM, TFConstants.T_CATAPULT);		
 			for each (var type:int in types) {
+				if (totalTroop[ troopIntNames[type] ] >= troopRequirement[ troopIntNames[type] ]) continue;
+
 				troopCond = getConditionBeanForTroop(type);
 				if (troopCond == null) continue;
 
-				if (totalTroop[ troopIntNames[type] ] >= troopRequirement[ troopIntNames[type] ]) continue;
 				var maxBatch:int = getConfig(CONFIG_DUMPING) * 3 * 3600 / troopTimes[type] * townFactor;
 				maxBatch = int(maxBatch/10) * 10;
 				if (maxBatch < 10) maxBatch = 10;
 
 				var randOrder:Array = Utils.randOrder(buildings.length);
 				for (var i:int = 0; i < randOrder.length; i++) {
+					if (totalTroop[ troopIntNames[type] ] >= troopRequirement[ troopIntNames[type] ]) break;
+
 					var building:BuildingBean = buildings[ randOrder[i] ];
 					if (building.typeId != BuildingConstants.TYPE_BARRACK) continue;
 					if (building == reservedBarrack) continue;
@@ -3264,8 +3270,11 @@ package scripts.jobQueue.script
 					if (!promoted) {
 						promoted = true;
 						promoteAttackChief(bestHero);
-					}					
+					}
+					
 					for (var j:int = curQueueSize; j < building.level; j++) {
+						if (totalTroop[ troopIntNames[type] ] >= troopRequirement[ troopIntNames[type] ]) break;
+
 						var amount:int = Math.min(batch, maxBatch);
 						if (estIdle < troopPopulations[type] * amount) break; // strange, shouldn't happen
 						logMessage("Use spare resource for " + amount + " " + troopExtNames[type] + " on barrack at " + building.positionId);
@@ -3279,7 +3288,6 @@ package scripts.jobQueue.script
 					
 						batch -= amount;
 						if (batch <= 0) break;
-						if (troopRequirement[ troopIntNames[type] ] <= totalTroop[ troopIntNames[type] ]) break;
 					}
 				}
 			}
@@ -6309,6 +6317,7 @@ package scripts.jobQueue.script
  			return result;
  		}
  		
+ 		private static var titleArr:Array = new Array("Civilian", "Knight", "Baronet", "Baron", "Viscount", "Earl", "Marquis", "Duke", "Furstin", "Prinzessin");
     	public function updateInfoData(data:ArrayCollection) : void {
     		data.removeAll();
     		var obj:Object;
@@ -6325,6 +6334,13 @@ package scripts.jobQueue.script
 
     		obj = new Object(); obj.col1 = "Prestige"; obj.col2 = player.playerInfo.prestige; data.addItem(obj);
     		obj = new Object(); obj.col1 = "Honor"; obj.col2 = player.playerInfo.honor; data.addItem(obj);
+    		obj = new Object(); obj.col1 = "Ranking"; obj.col2 = player.playerInfo.ranking; data.addItem(obj);
+    		obj = new Object(); obj.col1 = "Time played"; obj.col2 = Utils.formatTime((Utils.getServerTime()-player.playerInfo.createrTime)/1000); data.addItem(obj);
+
+    		obj = new Object(); obj.col1 = "Alliance"; obj.col2 = (player.playerInfo.alliance == null) ? "" : player.playerInfo.alliance; data.addItem(obj);
+    		obj = new Object(); obj.col1 = "Role"; obj.col2 = (player.playerInfo.alliance == null) ? "" : player.playerInfo.allianceLevel; data.addItem(obj);
+    		obj = new Object(); obj.col1 = "Office"; obj.col2 = player.playerInfo.office; data.addItem(obj);
+    		obj = new Object(); obj.col1 = "Title"; obj.col2 = titleArr[player.playerInfo.titleId]; data.addItem(obj);
     	}
     	
     	public function updateResourceData(data:ArrayCollection) : void {
@@ -6392,6 +6408,7 @@ package scripts.jobQueue.script
     			obj.col2 = field.name;
     			obj.col3 = field.level;
     			obj.col4 = int(Map.fieldDistance(castle.fieldId, field.id)*100)/100.0;
+    			obj.col5 = field.id;
 	    		data.addItem(obj);
 	    	}
     	}
@@ -6416,6 +6433,8 @@ package scripts.jobQueue.script
     			}
     			var army:ArmyBean = getArmyByHero(hero);
     			if (army != null) obj.label += "\n" + armyToString(army);
+
+				obj.col4 = (hero.status == HeroConstants.HERO_GUARD_STATU || hero.status == HeroConstants.HERO_SEND_STATU) ? hero.id : -1;   			
     			data.addItem(obj);
     		}
     	}
@@ -6538,13 +6557,16 @@ package scripts.jobQueue.script
 				var extra:String = "";
 				if (army.direction == ArmyConstants.ARMY_FORWARD) {
 					obj.col3 = remainTime(army.reachTime);
+					obj.col4 = army.armyId;
 					extra = "\nArrival: " + new Date(army.reachTime).toLocaleTimeString();
 				} else if (army.direction == ArmyConstants.ARMY_BACKWARD) {
 					obj.col1 += " return";
 					obj.col3 = remainTime(army.reachTime);
+					obj.col4 = -1;
 					extra = "\nArrival: " + new Date(army.reachTime).toLocaleTimeString();
 				} else {
 					obj.col1 += " at";
+					obj.col4 = army.armyId;
 				}
 
     			obj.col2 = army.targetPosName + " " + Map.fieldIdToString(army.targetFieldId);			
@@ -6582,8 +6604,9 @@ package scripts.jobQueue.script
 					obj.col1 = "unknown" + army.missionType;
 				}
 
-				obj.col3 = (army.reachTime != -1) ? remainTime(army.reachTime) : "";
     			obj.col2 = (army.startFieldId != -1) ? army.startPosName + " " + Map.fieldIdToString(army.startFieldId) : "";			
+				obj.col3 = (army.reachTime != -1) ? remainTime(army.reachTime) : "";
+				obj.col4 = -1;
 				obj.label = obj.col2 +
 					((army.alliance != null) ? " alliance:" + army.alliance : "") +
 					((army.king != null) ? " lord:" + army.king : "") +
@@ -6597,7 +6620,7 @@ package scripts.jobQueue.script
 
     		for each (army in friendlyArmies) {
     			obj = new Object();
-    			
+
 				if (army.missionType == ObjConstants.ARMY_MISSION_SEND) {
 					obj.col1 = "reinforce";
 				} else if (army.missionType == ObjConstants.ARMY_MISSION_TRANS) {
@@ -6605,6 +6628,8 @@ package scripts.jobQueue.script
 				} else {
 					obj.col1 = "unknown" + army.missionType;
 				}
+				
+    			obj.col2 = army.startPosName + " " + Map.fieldIdToString(army.startFieldId);			
 
 				var extra:String = "";
 				if (army.direction == ArmyConstants.ARMY_FORWARD) {
@@ -6616,7 +6641,7 @@ package scripts.jobQueue.script
 					obj.col1 += " from";
 				}
 
-    			obj.col2 = army.startPosName + " " + Map.fieldIdToString(army.startFieldId);			
+    			obj.col4 = (army.direction == ArmyConstants.ARMY_STAY) ? army.armyId : -1;
 				obj.label = "Army id: " + army.armyId +
 					"\n" + obj.col2 +
 					((army.hero == null) ? "" : ("\nhero " + army.hero + " " + army.heroLevel)) +
