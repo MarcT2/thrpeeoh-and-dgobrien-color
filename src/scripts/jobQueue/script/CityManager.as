@@ -548,6 +548,8 @@ package scripts.jobQueue.script
 			huntingLocation = -1;
 			trainingHeroName = null;
 			trainingHeroNeeded = true;
+			
+			for (var i:int = 0; i < 4; i++) gateSettings[i] = GATE_AUTO;
 		}
 		
 		public function addTroopGoal(troopRequirement:TroopBean) : void {
