@@ -1700,14 +1700,15 @@ package scripts.jobQueue.script
 			if (speed == 0) return 0;			// nothing in troop or research is not available yet
 			return distance * 60000 / speed;
 		}
-
+		
+		private static var SPEEDUP:Array = new Array(1, 2, 2, 2, 3, 4, 4, 4, 5, 5, 6);
 		private function getTravelTime(newArmy:NewArmyParam) : Number {
 			var travelTime:Number = getAttackTravelTime(castle.fieldId, newArmy.targetPoint, newArmy.troops);
-			if (newArmy.missionType == ObjConstants.ARMY_MISSION_SEND || newArmy.missionType == ObjConstants.ARMY_MISSION_TRANS) travelTime = travelTime / (1+0.1*getBuildingLevel(BuildingConstants.TYPE_TRANSPORT_STATION));
+			if (newArmy.missionType == ObjConstants.ARMY_MISSION_SEND || newArmy.missionType == ObjConstants.ARMY_MISSION_TRANS) travelTime = travelTime / SPEEDUP[getBuildingLevel(BuildingConstants.TYPE_TRANSPORT_STATION)];
 			travelTime = travelTime + newArmy.restTime
 			return travelTime;
 		}
-		
+
 		private function getFoodConsume(newArmy:NewArmyParam) : Number {
 			return getFoodConsumeRate(newArmy.troops)*2*getTravelTime(newArmy)/3600;
 		}
