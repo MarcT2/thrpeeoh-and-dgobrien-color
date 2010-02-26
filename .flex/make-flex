@@ -1,0 +1,9 @@
+#!/bin/bash
+directory=.flex
+
+if [ -d $directory ]; then
+	cp -fv $directory/.project $directory/.action* .
+else
+	cp -fv .project .action* ..
+fi
+

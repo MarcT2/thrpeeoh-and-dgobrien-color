@@ -1,0 +1,22 @@
+<!-- Not a really at build file for the whole project. It justs updates the version file which is
+     used to attach build number and build date to the application -->
+
+<project>
+
+<!-- taskdef resource="flexTasks.tasks"  classpath="${ANT_HOME}/lib/flexTasks.jar" /-->
+<target name="versionbuild">
+     <buildnumber file="build.number" />
+     <tstamp prefix="build"/>
+     <tstamp>
+         <format property="build.time" pattern="MMM dd yy hh:mm aa"/>
+     </tstamp>
+     <echo>Build Number ${build.number} ${build.time}</echo>
+     <copy file="src/Version.as.template"
+              tofile="src/Version.as" 
+     			overwrite="true"/>
+     <replace file="src/Version.as"
+            token="@buildnumber@" value="${build.number}" />
+     <replace file="src/Version.as"
+            token="@buildtime@" value="${build.time}" />
+</target>
+	</project>
