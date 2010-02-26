@@ -3,7 +3,7 @@ package scripts.jobQueue.script
 	import com.umge.sovt.client.action.ActionFactory;
 	import com.umge.sovt.common.beans.MapCastleBean;
 	import com.umge.sovt.common.constants.AllianceConstants;
-	import com.umge.sovt.common.module.common.MapInfoResponse;
+	import com.umge.sovt.common.module.common.MapInfoSimpleResponse;
 	import com.umge.sovt.common.module.field.OtherFieldInfoResponse;
 	
 	import flash.events.TimerEvent;
@@ -137,10 +137,10 @@ package scripts.jobQueue.script
 			var startx:int = int(x/WSIZE) * WSIZE;
 			var starty:int = int(y/WSIZE) * WSIZE;
 			trace("Get map at " + startx + "," + starty + ", size: " + WSIZE);
-			ActionFactory.getInstance().getCommonCommands().mapInfo(startx, starty, startx+WSIZE-1, starty+WSIZE-1, handleMapInfoResponse);
+			ActionFactory.getInstance().getCommonCommands().mapInfoSimple(startx, starty, startx+WSIZE-1, starty+WSIZE-1, handleMapInfoSimpleResponse);
 		}
 		
-		private static function handleMapInfoResponse(response:MapInfoResponse) : void {
+		private static function handleMapInfoSimpleResponse(response:MapInfoSimpleResponse) : void {
 			lastCacheMapTime = null;
 			if (response.ok != 1) {
 				trace("Unable to obtain map: " + response.msg);

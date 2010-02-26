@@ -1958,6 +1958,9 @@ package scripts.jobQueue.script
 			var any:Boolean = false;
 			var hero:HeroBean;
 			
+			var avoidReward:HeroBean = worstAttackBaseHero();
+			if (avoidReward.power - avoidReward.level > getConfig(CONFIG_FASTHERO)) avoidReward = null;
+			
 			for each(hero in heroes) {
 				if (hero.status != CityStateConstants.HERO_STATUS_IDLE && hero.status != CityStateConstants.HERO_STATUS_MAYOR) continue;
 				var experience:int = hero.experience;
@@ -1969,7 +1972,8 @@ package scripts.jobQueue.script
 					ActionFactory.getInstance().getHeroCommand().levelUp(castle.id, hero.id);
 					any = true;
 				}
-				if (!isLoyal(hero) && estResource.gold >= hero.level * 100) {
+
+				if (!isLoyal(hero) && hero != avoidReward && estResource.gold >= hero.level * 100) {
 					if (cityTimingAllowed("reward" + hero.id, 900)) {
 						logMessage("reward hero: " + heroToString(hero) + "#000066");
 						ActionFactory.getInstance().getHeroCommand().awardGold(castle.id, hero.id);

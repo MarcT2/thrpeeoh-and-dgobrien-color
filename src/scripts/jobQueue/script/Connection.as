@@ -185,9 +185,10 @@ package scripts.jobQueue.script
 		private function directSendMessage(cmd:String, data:Object):void {
 			if (socket.connected) {
 				var obj:Object = new Object();
-				obj.data = data;
+
 				obj.cmd = cmd;
-				
+				obj.data = data;
+
 				var buffer:ByteArray = new ByteArray();
 				buffer.writeObject(obj);
 				socket.writeInt(buffer.length);
