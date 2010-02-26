@@ -204,7 +204,7 @@
 
 	        public function onAllianceChat(msg:AllianceChatMsg):void {
 	        	// Send Alliance chat to window
-	        	appendToTextArea(aChatText, " [" + msg.fromUser + "]: " + msg.msg);
+	        	appendToTextArea(aChatText, " [" + msg.fromUser + "]: " + msg.msg, "#4377F9");
 	   
 				if (chatStack.selectedIndex != 0)
 				{
@@ -220,13 +220,13 @@
 	        }
 
 	        public function onWorldChat(msg:WorldChatMsg):void {
-	        	appendToTextArea(wChatText, "[" + msg.fromUser + "]: " + msg.msg);
+	        	appendToTextArea(wChatText, "[" + msg.fromUser + "]: " + msg.msg, "#222222");
 	        	// purposely do not highlight tab
 	        }
 
 			// strange, chat sent to world chat now appears in channel chat?
 	        public function onChannelChat(msg:ChannelChatMsg):void {
-	        	appendToTextArea(wChatText, "[" + msg.fromUser + "]: " + msg.msg);
+	        	appendToTextArea(wChatText, "[" + msg.fromUser + "]: " + msg.msg, "#222222");
 	        	// purposely do not highlight tab
 	        }
 
@@ -243,7 +243,8 @@
 	        		return;
 	        	}
 	        	
-	        	appendToTextArea(pChatText, " [" + msg.fromUser + "]: " + msg.msg);
+	        	appendToTextArea(pChatText, " [" + msg.fromUser + "]: " + msg.msg, "#6A44AF");
+	        	appendToTextArea(aChatText, " [" + msg.fromUser + "]: " + msg.msg, "#6A44AF");
 	        	
 	        	if (chatStack.selectedIndex != 1)
 	        	{
@@ -292,7 +293,7 @@
 						logMessage("Click on Resume to resume the program. Make sure you don't resume when the server is down, though.");
                 	}
                 } else {
-                	appendToTextArea(wChatText, "SYSTEM: " + msg, "#3F3F3F");
+                	appendToTextArea(wChatText, "SYSTEM: " + msg, "#4377F9");
                 	appendToTextArea(aChatText, "SYSTEM: " + msg, "#3F3F3F");
                 }
             }
@@ -422,7 +423,7 @@
 						if (CityManager.isJunkTroop(army.troop)) continue;
 						city = army.targetPosName;
 			        	var sName:String = city;
-			        	if (sName.length > 3) sName = sName.substring(0, 3);
+			        	if (sName.length > 5) sName = sName.substring(0, 5);
 			        	sName = sName + "(" + Map.getX(army.targetFieldId) + "," + Map.getY(army.targetFieldId) + ")";
 
 			    		for each (var t1:Object in citiesTab.getChildren())
@@ -601,7 +602,7 @@
 						if (msg2 == "") return;
 						lastChatUser = userName;
 		        		ActionFactory.getInstance().getCommonCommands().privateChat(userName,msg2)
-		        		appendToTextArea(pChatText, " [to " + lastChatUser + "]: " + msg2);
+		        		appendToTextArea(pChatText, " [to " + lastChatUser + "]: " + msg2, "#6A44AF");
 	        		}
 					else if (chatStack.selectedIndex == 2) // world chat
 					{
@@ -617,7 +618,7 @@
 	        }
 	        
 	        private function logCommandMessage(str:String) : void {
-		        appendToTextArea(commandText, " " + str);
+		        appendToTextArea(commandText, " " + str, "#096E6D");
 	        	if (chatStack.selectedIndex != 3) commandLabel.setStyle("fontWeight", "bold");
 	        }
 
@@ -891,14 +892,14 @@
         			return;
         		}
         		if (response.ok != 1) {
-        			logCommandMessage("Error: " + response.errorMsg);
+        			logCommandMessage("Error Generic: " + response.errorMsg);
         			return;
         		}        		
         	}
 
         	private function handleCommandResponse(response:PlayerInfoResponse) : void {
         		if (response.ok != 1) {
-        			logCommandMessage("Error: " + response.errorMsg);
+        			logCommandMessage("Error Player: " + response.errorMsg);
         			return;
         		}
         	}

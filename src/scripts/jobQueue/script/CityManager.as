@@ -1867,7 +1867,7 @@ package scripts.jobQueue.script
 			if (getConfig(CONFIG_TROOP) && countBuilding(BuildingConstants.TYPE_EMBASSY, 1) > 0) {
 				if (!castle.allowAlliance) {
 					castle.allowAlliance = true;
-					logMessage("Allow alliance troop");
+					logMessage("Allow alliance troop" , "#2B602D");
 					ActionFactory.getInstance().getArmyCommands().setAllowAllianceArmy(castle.id, true);
 				}
 			}
@@ -1917,7 +1917,7 @@ package scripts.jobQueue.script
 				trace("add hero: " + heroToString(response.hero));
 				for (i = 0; i < heroes.length; i++) {
 					if (heroes[i].id == response.hero.id) {
-						logMessage("ABNORMAL hero addition, hero exists " + heroToString(heroes[i]));
+						logMessage("ABNORMAL hero addition, hero exists " + heroToString(heroes[i]) , "#660000");
 						return;
 					}
 				}
@@ -1990,15 +1990,15 @@ package scripts.jobQueue.script
 
 				if (hero.remainPoint > 0) {
 					if (hero.management >= hero.power && hero.management >= hero.stratagem) {
-						logMessage("assign point for politics hero: " + heroToString(hero));
+						logMessage("assign point for politics hero: " + heroToString(hero) , "#7A1595");
 						ActionFactory.getInstance().getHeroCommand().addPoint(castle.id, hero.id, hero.remainPoint+hero.management, hero.power, hero.stratagem, handleHeroAddPointResponse);
 						any = true;
 					} else if (hero.stratagem >= hero.power && hero.stratagem >= hero.management) {
-						logMessage("assign point for intel hero: " + heroToString(hero));
+						logMessage("assign point for intel hero: " + heroToString(hero) , "#7A1595");
 						ActionFactory.getInstance().getHeroCommand().addPoint(castle.id, hero.id, hero.management, hero.power, hero.remainPoint+hero.stratagem, handleHeroAddPointResponse);
 						any = true;
 					} else  {
-						logMessage("assign point for attack hero: " + heroToString(hero));
+						logMessage("assign point for attack hero: " + heroToString(hero) , "#7A1595");
 						ActionFactory.getInstance().getHeroCommand().addPoint(castle.id, hero.id, hero.management, hero.remainPoint+hero.power, hero.stratagem, handleHeroAddPointResponse);
 						any = true;
 					}
@@ -2584,7 +2584,7 @@ package scripts.jobQueue.script
 			if (response.castleId != castle.id) return;
 			if (response.goldNeed == 0) return;  // nothing to cure
 			
-			logMessage("Troop injured: " + troopBeanToString(response.troop) + ", healing requires " + response.goldNeed + " gold," , "#FF0000");
+			logMessage("Troop injured: " + troopBeanToString(response.troop) + ", healing requires " + response.goldNeed + " gold" , "#FF0000");
 			healingGoldRequired = response.goldNeed;
 		}
 
