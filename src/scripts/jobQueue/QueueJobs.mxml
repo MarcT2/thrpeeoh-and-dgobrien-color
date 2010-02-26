@@ -119,6 +119,11 @@
 				commandLabel.addEventListener(MouseEvent.ROLL_OVER, label_rollOver);
 				commandLabel.addEventListener(MouseEvent.ROLL_OUT, label_rollOut);
 				
+				clrButton.setStyle('fontSize','10');
+				clrButton.setStyle('fontWeight','normal');
+				clrButton.setStyle("themeColor", 0x000000 );
+				clrButton.setStyle("color", "#000000");									
+
 				mainPanel.addEventListener(MouseEvent.CLICK,
 				function (event:MouseEvent) : void {
 					if (event.target is UITextField) {
@@ -300,6 +305,10 @@
             
 	        private var lastDate:Date = new Date();
 	        private var cache:Array = new Array();
+	        private function clearLogs() : void {
+	        	logs.text = "";
+	        	cache[logs.id] = "";
+	        }
 			
 	        private function appendToTextArea(textControl:TextArea, message:String, color:String = "#000000" ) : void
 	        {
@@ -1045,7 +1054,7 @@
 	<mx:Panel id="mainPanel" title="AutoEvony - http://code.google.com/p/autoevony/wiki/Instruction" height="100%" width="100%" layout="horizontal" borderStyle="solid" borderColor="#090909" >
 
 	<mx:VBox width="100%" height="100%" verticalGap="0" borderStyle="none">
-	<mx:HBox width="100%">
+	<mx:HBox width="100%" height="30">
 		<mx:TabBar id="citiesTab" direction="horizontal"  fontSize="10"/>
 		<mx:HBox width="0" height="100%"></mx:HBox>
 		<mx:Button id="pauseButton" label="Pause" enabled="true" click="pauseQueue()" fontSize="10"/>
@@ -1056,9 +1065,10 @@
 	<mx:ViewStack id="citiesViewStack" width="100%" height="50%" ></mx:ViewStack>
 		<mx:HDividedBox width="100%" id="logChatBox" horizontalGap="3" height="50%" borderStyle="solid" borderThickness="0" verticalAlign="bottom">
 			<mx:VBox width="50%" height="100%" verticalGap="0" borderStyle="none" id="vlogs">
-				<mx:HBox width="100%" height="22">
-					<mx:Label text="Log" id="allLogLabel" fontSize="12"/>
-					<mx:Label text="City log" id="citylogLabel"/>
+				<mx:HBox width="100%" height="24">
+					<mx:Label text="Logs" width="5%" id="allLogLabel" fontSize="12"/>
+					<mx:Label text="City log" width="85%" id="citylogLabel"/>
+					<mx:Button label="Clear" height="20" click="clearLogs()" id="clrButton" styleName="gradientRectangleSkin"/>
 				</mx:HBox>
 				<mx:ViewStack id="logStack" width="100%" height="100%" creationPolicy="all">
 					<mx:Canvas id="logCanv" width="100%" height="100%" label="Log">
@@ -1080,21 +1090,21 @@
 						</mx:HBox>
 						<mx:ViewStack id="chatStack" width="100%" height="100%" creationPolicy="all">
 							<mx:Canvas id="aChatCanv" width="100%" height="100%" label="Alliance Chat">
-								<mx:TextArea id="aChatText" width="100%" height="100%" wordWrap="true" editable="false" enabled="true" color="#4377F9" right="0" bottom="0"/>
+								<mx:TextArea id="aChatText" fontFamily="_sans" fontSize="11" width="100%" height="100%" wordWrap="true" editable="false" enabled="true" right="0" bottom="0"/>
 							</mx:Canvas>
 							<mx:Canvas id="pChatCanv" width="100%" height="100%" label="Private Chat">
-								<mx:TextArea id="pChatText" width="100%" height="100%" wordWrap="true" editable="false" enabled="true" color="#6A44AF" right="0" bottom="0"/>
+								<mx:TextArea id="pChatText" fontFamily="_sans" fontSize="11" width="100%" height="100%" wordWrap="true" editable="false" enabled="true" right="0" bottom="0"/>
 							</mx:Canvas>
 							<mx:Canvas id="wChatCanv" width="100%" height="100%" label="World Chat">
-								<mx:TextArea id="wChatText" width="100%" height="100%" wordWrap="true" editable="false" enabled="true" color="#555555" right="0" bottom="0"/>
+								<mx:TextArea id="wChatText" fontFamily="_sans" fontSize="11" width="100%" height="100%" wordWrap="true" editable="false" enabled="true" right="0" bottom="0"/>
 							</mx:Canvas>
 							<mx:Canvas id="commandCanv" width="100%" height="100%" label="Commands">
-								<mx:TextArea id="commandText" width="100%" height="100%" wordWrap="true" editable="false" enabled="true" color="#096E6D" right="0" bottom="0"/>
+								<mx:TextArea id="commandText" fontFamily="_sans" fontSize="11" width="100%" height="100%" wordWrap="true" editable="false" enabled="true" right="0" bottom="0"/>
 							</mx:Canvas>
 						</mx:ViewStack>
 						<mx:HBox width="100%" height="24" verticalAlign="bottom">
-							<mx:TextInput id="chatText" width="90%" editable="true" height="100%" maxChars="150"/>
-							<mx:Button label="Send" id="sendButton" click="sendChat()" height="100%"/>
+							<mx:TextInput id="chatText" width="90%" editable="true" height="100%" maxChars="150" color="black"/>
+							<mx:Button label="Send" id="sendButton" click="sendChat()" height="100%" styleName="gradientRectangleSkin"/>
 						</mx:HBox>
 					</mx:VBox>
 				</mx:VDividedBox>

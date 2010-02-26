@@ -6755,6 +6755,32 @@ package scripts.jobQueue.script
 			}
    		}
 
+    	public function updateNPC5Data(data:ArrayCollection) : void {
+    		data.removeAll();
+    		var x:int  = 0;
+    		for each(var fieldid:int in localNPCs ) {
+    			fieldid = localNPCs[ x ].toString();
+    			var obj:Object = new Object();
+    			obj.col1 = Map.fieldIdToCoordString( fieldid );
+    			obj.col2 = int(Map.fieldDistance( castle.fieldId , fieldid )*100)/100.0;
+    			data.addItem(obj);
+    			x = x + 1
+    		}
+       	}
+
+    	public function updateNPC10Data(data:ArrayCollection) : void {
+    		data.removeAll();
+    		var x:int  = 0;
+    		for each(var fieldid:int in localNPC10s ) {
+    			fieldid = localNPC10s[ x ].toString();
+    			var obj:Object = new Object();
+    			obj.col1 = Map.fieldIdToCoordString( fieldid );
+    			obj.col2 = int(Map.fieldDistance( castle.fieldId , fieldid )*100)/100.0;
+    			data.addItem(obj);
+    			x = x + 1
+    		}
+    	}
+
     	public function updateTradesData(data:ArrayCollection) : void {
     		data.removeAll();
 			if (countBuilding(BuildingConstants.TYPE_MARKET, 1) == 0) return;
