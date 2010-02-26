@@ -27,7 +27,7 @@
 			[Bindable] private var fortificationsData:ArrayCollection = new ArrayCollection;
 			[Bindable] private var tradesData:ArrayCollection = new ArrayCollection;
 			
-			public function init(queueJobs:QueueJobs, city:CityState) : void {
+			public function init(queueJobs:QueueJobs, city:CityState, log:CityLogView) : void {
 	        	this.queueJobs = queueJobs;
 				this.city = city;
 	        	this.script = new Script(city);
@@ -41,7 +41,9 @@
 	        	this.label = sName + "(" + Map.getX(city.castle.fieldId) + "," + Map.getY(city.castle.fieldId) + ")";
 
 	        	script.addEventListener(ScriptLogEvent.TYPE, queueJobs.onLog);
+	        	script.addEventListener(ScriptLogEvent.TYPE, log.onLog);
 	        	city.cityManager.addEventListener(ScriptLogEvent.TYPE, queueJobs.onLog);
+	        	city.cityManager.addEventListener(ScriptLogEvent.TYPE, log.onLog);
 	        	script.addEventListener(Script.STOP, handleEndScript);
 	        	if (city.castle == city.player.castlesArray[0]) Connection.getInstance().addEventListener(ScriptLogEvent.TYPE, queueJobs.onLog);
 	        	

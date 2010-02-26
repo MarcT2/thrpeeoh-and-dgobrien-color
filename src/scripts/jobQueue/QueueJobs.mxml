@@ -51,6 +51,7 @@
     		import com.umge.sovt.common.server.events.AllianceChatMsg;
 			import com.umge.sovt.common.server.events.EnemyArmysUpdate;
 			import com.umge.sovt.common.server.events.LoginResponse;
+			import mx.events.ItemClickEvent;
 
 			public var currentPlayer:PlayerBean;
 	        
@@ -89,6 +90,16 @@
 				ResponseDispatcher.getInstance().addEventListener(ResponseDispatcher.SERVER_CONNECTION_LOST, onDisconnect);
 				ResponseDispatcher.getInstance().addEventListener(ResponseDispatcher.SERVER_SYSTEM_INFO_MSG, onSystemMessage);
 
+				citiesTab.addEventListener(ItemClickEvent.ITEM_CLICK, ontab_changed);
+				
+				allLogLabel.addEventListener(MouseEvent.CLICK, onLogClick);
+				allLogLabel.addEventListener(MouseEvent.ROLL_OVER, label_rollOver);
+				allLogLabel.addEventListener(MouseEvent.ROLL_OUT, label_rollOut);
+				
+				citylogLabel.addEventListener(MouseEvent.CLICK, onCityLogClick);
+				citylogLabel.addEventListener(MouseEvent.ROLL_OVER, label_rollOver);
+				citylogLabel.addEventListener(MouseEvent.ROLL_OUT, label_rollOut);
+				
 				activateLabel(allianceChatLabel);
 				chatText.addEventListener(KeyboardEvent.KEY_UP, keySendChat);
 				
@@ -141,10 +152,10 @@
 	        	
 	        	var date:Date = new Date();
 	        	date.setTime(Utils.getServerTime());
-	        	appendToTextArea(logs, " Logged in successfully, server time difference: " + (Utils.getServerLagTime()/1000) + "s");
+	        	appendToTextArea(logs, "<b>Logged in successfully, server time difference: " + (Utils.getServerLagTime()/1000) + "s</b>");
 	        	if (Math.abs(Utils.getServerLagTime()) > 5000) {	// more than 5s lag
-	        		appendToTextArea(logs, "Your current computer time: " + new Date().toLocaleTimeString());
-	        		appendToTextArea(logs, "YOU MAY ADJUST YOUR COMPUTER CLOCK TO AVOID CONFUSION, BUT BE SURE TO CLICK ON REFRESH IF YOU DO.");
+	        		appendToTextArea(logs, "<b>Your current computer time: " + new Date().toLocaleTimeString() + "</b>");
+	        		appendToTextArea(logs, "<b>PLEASE AVOID ADJUST YOUR COMPUTER CLOCK WHILE THE BOT IS RUNNING. IF YOU ADJUST, BE SURE TO CLICK ON REFRESH.</b>");
 	        	}
 	        	parseCities(currentPlayer.castlesArray.toArray(), currentPlayer);
 	        		        	
@@ -184,7 +195,7 @@
                             break;
                 }
 
-                appendToTextArea(logs, message);
+                appendToTextArea(logs, "<b>" + message + "</b>");
 
                 if (resp.reasonCode == ConnectionLost.KICK_BY_OTHER) {
                 	ensurePauseQueue(Utils.rand(28*60*1000, 32*60*1000)); // 28-32 min
@@ -281,33 +292,44 @@
 						logMessage("Click on Resume to resume the program. Make sure you don't resume when the server is down, though.");
                 	}
                 } else {
-                	appendToTextArea(wChatText, "SYSTEM: " + msg);
-                	appendToTextArea(aChatText, "SYSTEM: " + msg);
+                	appendToTextArea(wChatText, "SYSTEM: " + msg, "#3F3F3F");
+                	appendToTextArea(aChatText, "SYSTEM: " + msg, "#3F3F3F");
                 }
             }
             
 	        private var lastDate:Date = new Date();
 	        private var cache:Array = new Array();
-	        private function appendToTextArea(textControl:TextArea, message:String) : void
+			
+	        private function appendToTextArea(textControl:TextArea, message:String, color:String = "#000000" ) : void
 	        {
 	        	var date:Date = new Date();
-	        	date.setTime(Utils.getServerTime());
+				date.setTime(Utils.getServerTime());
 	        	
-	        	if (cache[textControl.id] == undefined) cache[textControl.id] = textControl.text;
+	        	if (cache[textControl.id] == undefined) cache[textControl.id] = textControl.htmlText;
+	        	var datecolor:String = "";
+	        	if ( color == "#000000" ) {
+	        		datecolor = "#006666";
+	        	} else {
+	        		datecolor = color;
+	        	}
 	        	
-	        	cache[textControl.id] += (date.toLocaleTimeString() + " " + message + "\n"); 
+	        	cache[textControl.id] += "<font color='" + datecolor + "'>" + (date.toLocaleTimeString() + "</font> <font color='" + color + "'>" + message + "</font>\n"); 
 	        	if (cache[textControl.id].length > 64000) {
 	        		var ind:int = cache[textControl.id].indexOf("\n", 16000);
 	        		cache[textControl.id] = cache[textControl.id].substr(ind);
 	        	}
 	        	
-	        	textControl.text = cache[textControl.id];
+	        	textControl.htmlText = cache[textControl.id];
 	        	callLater(
 		        	function():void 
 		        	{    	
 		        		textControl.verticalScrollPosition = textControl.maxVerticalScrollPosition;
 		        	});	
 	        }
+	        
+			private function ontab_changed(event:ItemClickEvent):void {
+				citiesLogViewStack.selectedIndex =  event.index;
+			}
 
 			private function parseCities(castlesArray:Array, player:PlayerBean) : void{
 				try {
@@ -336,10 +358,13 @@
 		        		}
 		        		
 		        		cities.push(city);
+		        		var log:CityLogView = new CityLogView();
+		        		citiesLogViewStack.addChild(log); 
+		        		
 		        		var cityPanel:CityPanel = new CityPanel();
 		        		// citiesViewStack.addChild(createCanvasForCity(city));
 		        		citiesViewStack.addChild(cityPanel);
-		        		cityPanel.init(this, city);
+		        		cityPanel.init(this, city, log);
 		        	}
 		        	
 		        	removeOldCities(castlesArray);
@@ -510,6 +535,19 @@
 	        	e.currentTarget.setStyle("textDecoration", "underline");
 	        }
 	        
+			public function onLogClick(e:Event):void
+			{
+				logStack.selectedChild=logCanv;
+				e.currentTarget.setStyle("fontSize", "12");
+				citylogLabel.setStyle("fontSize", "10");
+			}
+			
+			public function onCityLogClick(e:Event):void
+			{
+				logStack.selectedChild=cLogCanv;
+				e.currentTarget.setStyle("fontSize", "12");
+				allLogLabel.setStyle("fontSize", "10");
+			}
 	        private function keySendChat(e:KeyboardEvent) : void
 	        {
 	        	if (e.keyCode == Keyboard.ENTER)
@@ -1017,8 +1055,18 @@
 	<mx:ViewStack id="citiesViewStack" width="100%" height="50%" ></mx:ViewStack>
 		<mx:HDividedBox width="100%" id="logChatBox" horizontalGap="3" height="50%" borderStyle="solid" borderThickness="0" verticalAlign="bottom">
 			<mx:VBox width="50%" height="100%" verticalGap="0" borderStyle="none" id="vlogs">
-				<mx:Label text="Logs:" width="100%" height="22" fontSize="12"/>
-				<mx:TextArea width="100%" id="logs" height="100%" wordWrap="true" editable="false" enabled="true"/>
+				<mx:HBox width="100%" height="22">
+					<mx:Label text="Log" id="allLogLabel" fontSize="12"/>
+					<mx:Label text="City log" id="citylogLabel"/>
+				</mx:HBox>
+				<mx:ViewStack id="logStack" width="100%" height="100%" creationPolicy="all">
+					<mx:Canvas id="logCanv" width="100%" height="100%" label="Log">
+						<mx:TextArea width="100%" id="logs" height="100%" wordWrap="true" editable="false" enabled="true"/>
+					</mx:Canvas>
+					<mx:Canvas id="cLogCanv" width="100%" height="100%" label="City log">
+						<mx:ViewStack id="citiesLogViewStack" width="100%" height="100%" ></mx:ViewStack>
+					</mx:Canvas>
+				</mx:ViewStack>
 			</mx:VBox>
 			<mx:VBox width="50%" height="100%" verticalGap="0" borderStyle="none" id="vchatbox">
 				<mx:VDividedBox height="100%" width="100%" verticalGap="2">

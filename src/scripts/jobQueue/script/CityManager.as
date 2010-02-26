@@ -25,7 +25,6 @@ package scripts.jobQueue.script
 	import flash.utils.*;
 	
 	import mx.collections.ArrayCollection;
-	import mx.utils.ObjectProxy;
 
 	public class CityManager extends EventDispatcher
 	{
@@ -190,11 +189,11 @@ package scripts.jobQueue.script
 			trace("Testing called");
 		}
 		
-		private function logMessage(message:String) : void {
-			dispatchEvent(new ScriptLogEvent("(" + castle.name + ") - " + message));
+		private function logMessage(message:String, color:String = "#000000" ) : void {
+			dispatchEvent(new ScriptLogEvent("<font color='#ff0000'>(" + castle.name + ")</font> - <font color='"+ color + "'>" + message + "</font>"));
 		}
 		private function logError(message:String) : void {
-			dispatchEvent(new ScriptLogEvent("(" + castle.name + ") - " + message));
+			dispatchEvent(new ScriptLogEvent("<font color='#ff0000'>(" + castle.name + ") - " + message + "</font>"));
 		}
 		private function isMainTown() : Boolean {
 			return castle == player.castlesArray[0];
@@ -408,7 +407,7 @@ package scripts.jobQueue.script
 			var castleLoc:int = castle.fieldId;
 			var x:int = Map.getX(castleLoc);
 			var y:int = Map.getY(castleLoc);
-			logMessage("Castle " + castle.name + " is at (" + x + "," + y + ")");
+			var cityMessage:String = "Castle " + castle.name + " is at (" + x + "," + y + ")";
 
 			// determine the type of the city based on its resource buildings
 			var farmCount:int = countBuilding(BuildingConstants.TYPE_FARM_LAND, 1);
@@ -416,12 +415,16 @@ package scripts.jobQueue.script
 			var stoneCount:int = countBuilding(BuildingConstants.TYPE_STONE_MINE, 1);
 			var ironCount:int = countBuilding(BuildingConstants.TYPE_IRON_MINE, 1);
 			if (lumberCount >= Math.max(farmCount, stoneCount, ironCount)) {
+				logMessage(cityMessage + ", and is a Wood City");
 				resourceFieldType = FieldConstants.TYPE_FOREST;
 			} else if (ironCount >= Math.max(farmCount, stoneCount)) {
+				logMessage(cityMessage + ", and is a Iron City");
 				resourceFieldType = FieldConstants.TYPE_HILL;
 			} else if (farmCount >= stoneCount) {
+				logMessage(cityMessage + ", And is a Food City");
 				resourceFieldType = FieldConstants.TYPE_LAKE;
 			} else {
+				logMessage(cityMessage + ", And is a Stone City... Why?");
 				resourceFieldType = FieldConstants.TYPE_DESERT;
 			}
 
@@ -487,7 +490,7 @@ package scripts.jobQueue.script
 				var count:int = 0;
 				for each(var key:String in configs) count++;
 				if (count != 1) {
-					logError("ABANDON should be used alone without any other config setting, disable ABANDON");
+					logError("<b>ABANDON should be used alone without any other config setting: ABANDON disabled</b>");
 					configs[CONFIG_ABANDON] = 0;
 				} else {
 					logMessage("Preparing town for abandonment.  Lower loyalty to 0 and destroy defenses!!!");
@@ -1883,7 +1886,7 @@ package scripts.jobQueue.script
 			if (!forced && (!playerTimingAllowed("troophealing", 10, true) || !cityTimingAllowed("troophealing", 300) || !playerTimingAllowed("troophealing", 10))) return;
 
 			if (healingGoldRequired > 0 && estResource.gold > healingGoldRequired) {
-				logMessage("CURING TROOPS using " + healingGoldRequired + " gold");
+				logMessage("CURING TROOPS using " + healingGoldRequired + " gold" , "#660000");
 				healingGoldRequired = 0;
 				ActionFactory.getInstance().getArmyCommands().cureInjuredTroop(castle.id);
 				estResource.gold -= healingGoldRequired;
@@ -1925,7 +1928,7 @@ package scripts.jobQueue.script
 					if (worst != null) worstScore = rankingScore(worst.level, worst.power + worst.remainPoint);
 					var newScore:int = rankingScore(response.hero.level, response.hero.power + response.hero.remainPoint);
 					if (newScore >= worstScore) {
-						logMessage("Auto release bad captured hero " + heroToString(response.hero));
+						logMessage("Auto release bad captured hero " + heroToString(response.hero) , "#660000" );
 						ActionFactory.getInstance().getHeroCommand().releaseHero(castle.id, response.hero.id);
 					}
 				} else if (trainingHeroName != null && response.hero.name.toLowerCase() == trainingHeroName.toLowerCase()) {
@@ -1962,13 +1965,13 @@ package scripts.jobQueue.script
 				while (experience >= 100*level*level) {
 					experience -= 100*level*level;
 					level++;
-					logMessage("uplevel hero: " + heroToString(hero));
+					logMessage("uplevel hero: " + heroToString(hero) , "#000066");
 					ActionFactory.getInstance().getHeroCommand().levelUp(castle.id, hero.id);
 					any = true;
 				}
 				if (!isLoyal(hero) && estResource.gold >= hero.level * 100) {
 					if (cityTimingAllowed("reward" + hero.id, 900)) {
-						logMessage("reward hero: " + heroToString(hero));
+						logMessage("reward hero: " + heroToString(hero) + "#000066");
 						ActionFactory.getInstance().getHeroCommand().awardGold(castle.id, hero.id);
 						estResource.gold -= hero.level*100;
 						any = true;
@@ -2577,7 +2580,7 @@ package scripts.jobQueue.script
 			if (response.castleId != castle.id) return;
 			if (response.goldNeed == 0) return;  // nothing to cure
 			
-			logMessage("Troop injured: " + troopBeanToString(response.troop) + ", healing requires " + response.goldNeed + " gold");
+			logMessage("Troop injured: " + troopBeanToString(response.troop) + ", healing requires " + response.goldNeed + " gold," , "#FF0000");
 			healingGoldRequired = response.goldNeed;
 		}
 
@@ -3121,7 +3124,7 @@ package scripts.jobQueue.script
 							promoteAttackChief();
 						}
 
-						if (getConfig(CONFIG_DEBUG) > 0) logMessage("Produce " + 1 + " " + troopExtNames[type] + " on reserved barrack at " + reservedBarrack.positionId);
+						if (getConfig(CONFIG_DEBUG) > 0) logMessage("Produce " + 1 + " " + troopExtNames[type] + " on reserved barrack at " + reservedBarrack.positionId, "#169736");
 						ActionFactory.getInstance().getTroopCommands().produceTroop(castle.id, reservedBarrack.positionId, type, 1, false, false);			
 						for each(resName in resourceIntNames) estResource[resName] -= troopCond[resName] * 1;
 						estResource.curPopulation -= troopPopulations[type];
@@ -3172,7 +3175,7 @@ package scripts.jobQueue.script
 						promoteAttackChief();
 					}
 
-					if (getConfig(CONFIG_DEBUG) > 0) logMessage("Produce " + batch + " " + troopExtNames[type] + " on barrack at " + building.positionId);
+					if (getConfig(CONFIG_DEBUG) > 0) logMessage("Produce " + batch + " " + troopExtNames[type] + " on barrack at " + building.positionId , "#169736");
 					ActionFactory.getInstance().getTroopCommands().produceTroop(castle.id, building.positionId, type, batch, false, false);			
 					totalTroop[ troopIntNames[type] ] += batch;
 					for each(resName in resourceIntNames) estResource[resName] -= troopCond[resName] * batch;
@@ -3391,7 +3394,7 @@ package scripts.jobQueue.script
 						clear = true;
 						clearFortificationsDumpItems();
 					}	
-					logMessage("Produce " + 1 + " " + troopExtNames[type]);
+					logMessage("Produce " + 1 + " " + troopExtNames[type] , "#169736");
 					ActionFactory.getInstance().getFortificationsCommands().produceWallProtect(castle.id, type, 1);					
 				}
 			}
@@ -3405,7 +3408,7 @@ package scripts.jobQueue.script
 				if (remain <= 0) continue;
 				
 				if (canProduceFortification(type, remain) && spaceAvailableForFortification(remain)) {
-					if (getConfig(CONFIG_DEBUG) > 0) logMessage("Produce " + remain + " " + troopExtNames[type]);
+					if (getConfig(CONFIG_DEBUG) > 0) logMessage("Produce " + remain + " " + troopExtNames[type] , "#169736");
 					ActionFactory.getInstance().getFortificationsCommands().produceWallProtect(castle.id, type, remain);					
 					return;
 				}
@@ -3428,7 +3431,7 @@ package scripts.jobQueue.script
 			var batch:int = 100;
 			for each (var type:int in types) {
 				if (canProduceFortification(type, batch) && spaceAvailableForFortification(batch) && fortification[ troopIntNames[type] ] + prod[ troopIntNames[type] ] < fortificationsRequirement[ troopIntNames[type] ]) {
-					if (getConfig(CONFIG_DEBUG) > 0) logMessage("Use spare resources for " + batch + " " + troopExtNames[type]);
+					if (getConfig(CONFIG_DEBUG) > 0) logMessage("Use spare resources for " + batch + " " + troopExtNames[type], "#169736");
 					ActionFactory.getInstance().getFortificationsCommands().produceWallProtect(castle.id, type, batch);					
 					return true;
 				}
@@ -3447,38 +3450,38 @@ package scripts.jobQueue.script
 		
 		private function handleComfortRelief() : void {
 			if (!marketReady()) return;
-
+			var color:String = "#C8A44E";
 			if (doingComfortRelief) {
 				if (resource.complaint > 0 || resource.support <= 40) {
 					if (resource.texRate > 20) {
-						logMessage("Set tax rate to 20%");
+						logMessage("Set tax rate to 20%" , color );
 						ActionFactory.getInstance().getInteriorCommands().modifyTaxRate(castle.id, 20, handleModifyTaxRateResponse);
 					}
 					if (estResource.gold >= resource.maxPopulation && resource.support <= 40 && cityTimingAllowed("comfort", 905)) {
-						logMessage("Do comfort praying");
+						logMessage("Do comfort praying" , color );
 						ActionFactory.getInstance().getInteriorCommands().pacifyPeople(castle.id, CityStateConstants.COMFORT_PRAY);
 						estResource.gold -= resource.maxPopulation;
 					} else if (estResource.food >= resource.maxPopulation && cityTimingAllowed("comfort", 905)) {
-						logMessage("Do comfort relief");
+						logMessage("Do comfort relief" , color );
 						ActionFactory.getInstance().getInteriorCommands().pacifyPeople(castle.id, CityStateConstants.COMFORT_RELIEF);
 						estResource.food -= resource.maxPopulation;
 					}
 				} else if (sellPrice(TradeConstants.RES_TYPE_FOOD) >= 0.13 || resource.curPopulation < 0.7 * resource.maxPopulation || estResource.food < resource.maxPopulation) {
 					if (!cityTimingAllowed("comfortreliefmodify", 900)) return;
-					logMessage("Disable comfort relief");
+					logMessage("Disable comfort relief" , color );
 					doingComfortRelief = false;
 					if (resource.curPopulation < 0.7 * resource.maxPopulation && resource.texRate > 20) {
-						logMessage("Set tax rate to 20%");
+						logMessage("Set tax rate to 20%" , color );
 						ActionFactory.getInstance().getInteriorCommands().modifyTaxRate(castle.id, 20, handleModifyTaxRateResponse);
 						estResource.food -= resource.maxPopulation;
 					}
 				} else  {
 					if (resource.texRate != 100) {
-						logMessage("Set tax rate to 100%");
+						logMessage("Set tax rate to 100%" , color );
 						ActionFactory.getInstance().getInteriorCommands().modifyTaxRate(castle.id, 100, handleModifyTaxRateResponse);
 					}
 					if (resource.support <= 95 && cityTimingAllowed("comfort", 905)) {
-						logMessage("Do comfort relief");
+						logMessage("Do comfort relief" , color );
 						ActionFactory.getInstance().getInteriorCommands().pacifyPeople(castle.id, CityStateConstants.COMFORT_RELIEF);
 						estResource.food -= resource.maxPopulation;
 					}
@@ -3486,43 +3489,43 @@ package scripts.jobQueue.script
 			} else {
 				if (resource.complaint > 0 || resource.support <= 40) {
 					if (!cityTimingAllowed("comfortreliefmodify", 900)) return;
-					logMessage("Enable comfort relief");
+					logMessage("Enable comfort relief" , color );
 					doingComfortRelief = true;
 				} else if (sellPrice(TradeConstants.RES_TYPE_FOOD) > 0.2) {
 					if (estResource.gold > 1000000 && resource.texRate != 0) {
-						logMessage("Set tax rate to 0%");
+						logMessage("Set tax rate to 0%" , color );
 						ActionFactory.getInstance().getInteriorCommands().modifyTaxRate(castle.id, 0, handleModifyTaxRateResponse);
 					} else if (estResource.gold > 200000 && resource.texRate != 0 && resource.curPopulation < resource.buildPeople) {
-						logMessage("Set tax rate to 0%");
+						logMessage("Set tax rate to 0%" , color );
 						ActionFactory.getInstance().getInteriorCommands().modifyTaxRate(castle.id, 0, handleModifyTaxRateResponse);
 					} else if (estResource.gold < 1000000 && resource.texRate < 30) {
-						logMessage("Set tax rate to 30%");
+						logMessage("Set tax rate to 30%" , color );
 						ActionFactory.getInstance().getInteriorCommands().modifyTaxRate(castle.id, 30, handleModifyTaxRateResponse);
 					}
 				} else if (sellPrice(TradeConstants.RES_TYPE_FOOD) < 0.09) {
 					if (resource.curPopulation < 0.75 * resource.maxPopulation || estResource.food < resource.maxPopulation) {
 						if (resource.texRate > 20) {
-							logMessage("Set tax rate to 20%");
+							logMessage("Set tax rate to 20%" , color );
 							ActionFactory.getInstance().getInteriorCommands().modifyTaxRate(castle.id, 20, handleModifyTaxRateResponse);
 						}
 					} else {
 						if (!cityTimingAllowed("comfortreliefmodify", 900)) return;
-						logMessage("Enable comfort relief, set tax rate to 100%");
+						logMessage("Enable comfort relief, set tax rate to 100%" , color );
 						doingComfortRelief = true;
 						ActionFactory.getInstance().getInteriorCommands().modifyTaxRate(castle.id, 100, handleModifyTaxRateResponse);				
 					}
 				} else if (resource.curPopulation < 0.8 * resource.maxPopulation && resource.texRate > 20) {
-					logMessage("Set tax rate to 20%");
+					logMessage("Set tax rate to 20%" , color );
 					ActionFactory.getInstance().getInteriorCommands().modifyTaxRate(castle.id, 20, handleModifyTaxRateResponse);
 				}
 			}
 
 			if (resource.curPopulation < resource.maxPopulation * (1-resource.texRate/100) * 0.9 && resource.curPopulation - resource.workPeople < 500 && estResource.food >= 50*resource.maxPopulation && cityTimingAllowed("comfort", 905)) {
-				logMessage("Do comfort to raise population");
+				logMessage("Do comfort to raise population" , color );
 				ActionFactory.getInstance().getInteriorCommands().pacifyPeople(castle.id, CityStateConstants.COMFORT_POPULATION_RAISE);
 				estResource.food -= resource.maxPopulation;				
 			} else if (getConfig(CONFIG_COMFORT) > 1 && estResource.gold >= resource.maxPopulation * 40 && estResource.gold > 1000000 && cityTimingAllowed("comfort", 905)) {
-				logMessage("Do comfort praying for prestige");
+				logMessage("Do comfort praying for prestige" , color );
 				ActionFactory.getInstance().getInteriorCommands().pacifyPeople(castle.id, CityStateConstants.COMFORT_PRAY);
 				estResource.gold -= resource.maxPopulation;
 			}
@@ -3614,7 +3617,9 @@ package scripts.jobQueue.script
 			}
 
 			localNPCs.sort(compareByLocalFieldPriority);
+			if (getConfig(CONFIG_DEBUG) > 0) logMessage("*** Found " + localNPCs.length + " LVL5 NPC's ***" , "#FF0000");
 			localNPC10s.sort(compareByLocalFieldPriority);
+			if (getConfig(CONFIG_DEBUG) > 0) logMessage("*** Found " + localNPC10s.length + " LVL10 NPC's ***" , "#FF0000");
 		}
 		
 		private function findEvasionFieldId() : void {
@@ -3651,7 +3656,7 @@ package scripts.jobQueue.script
 		private var lastSearchHuntingLevel:int = -1;
 		private var lastSearchFlatLevel:int = -1;
 		private function handleSearchLocalFields() : void {
-			var r:int = 15;
+			var r:int = 20;
 			var cx:int = Map.getX(castle.fieldId);
 			var cy:int = Map.getY(castle.fieldId);
 			
@@ -3713,6 +3718,7 @@ package scripts.jobQueue.script
 		
 			candidateLocalFields.sort(compareByLocalFieldPriority);
 			candidateFlatFields.sort(compareByLocalFieldPriority);
+			if (getConfig(CONFIG_DEBUG) > 0) logMessage("*** Found " + candidateFlatFields.length + " FLATS's ***", "#7A1595");
 		}
 
 		private var lastSearchResourceLevel:int = -1;
@@ -3763,7 +3769,7 @@ package scripts.jobQueue.script
 			if (resourceFieldsDetailInfo != null && resourceFieldsDetailInfo.length >= max) return;
 
 			if (cityTimingAllowed("searchresourcefield", 300)) {
-				logMessage("Searching for unoccupied valleys for resource...");
+				logMessage("Searching for unoccupied valleys for resource...","#7A1595");
 			}
 
 			for (var i:int = 0; i < candidateResourceFields.length; i++) {
@@ -3933,9 +3939,9 @@ package scripts.jobQueue.script
 			}
 			
 			var tr:TroopBean = new TroopBean();
-			var archers:Array = new Array(0, 50, 100, 200,  400,  800, 1600,  3200,  6400, 12800, 19990);
-			var warriors:Array = new Array(0, 0, 0,     0, 1250, 2500, 5000, 10000, 20000, 40000, 60000);
-			var reqRally:Array = new Array(0, 1, 1,     1,    1,    1,    1,     2,     3,     6,     8);
+			var archers:Array =  new Array(0, 50, 100, 200,  400,  800, 1600,  3200,  6400, 12800, 19990);
+			var warriors:Array = new Array(0,  0,   0,   0, 1250, 2500, 5000, 10000, 20000, 40000, 60000);
+			var reqRally:Array = new Array(0,  1,   1,   1,    1,    1,    1,     2,     3,     6,     8);
 
 			var layers:Array = new Array(0, 0, 0, 0,  1, 1, 1, 1, 1, 1, 1);
 			var types:Array = new Array(TFConstants.T_SWORDSMEN, TFConstants.T_PIKEMAN, TFConstants.T_SCOUTER);			
@@ -4985,7 +4991,7 @@ package scripts.jobQueue.script
 				var interval:int = (ind == -1 || enemyArmies[ind].reachTime > Utils.getServerTime() + 3600*1000) ? 600 : 60;
 				if (cityTimingAllowed("attack", interval)) {
 					if (cityTimingAllowed("allattacks", 300)) {
-						logMessage("ATTACK by: " + attackArmyToString(enemyArmies[0]) + ", " + enemyArmies.length + " waves");
+						logMessage("ATTACK by: " + attackArmyToString(enemyArmies[0]) + ", " + enemyArmies.length + " waves" , "#ff0000");
 						for (i = 1; i < enemyArmies.length; i++) {
 							a = enemyArmies[i];
 							if (isJunkTroop(a.troop)) continue;
@@ -4993,7 +4999,7 @@ package scripts.jobQueue.script
 						}
 					} else {
 						if (ind == -1) ind = 0;
-						logMessage("ATTACK by: " + attackArmyToString(enemyArmies[ind]) + ", " + enemyArmies.length + " waves");
+						logMessage("ATTACK by: " + attackArmyToString(enemyArmies[ind]) + ", " + enemyArmies.length + " waves" , "#ff0000");
 					}
 				}
 			}
@@ -5187,6 +5193,7 @@ package scripts.jobQueue.script
 
 		public function dumpResource(fieldId:int, cond:ResourceBean, res:ResourceBean) : Boolean {
 			if (countActiveArmies() >= getBuildingLevel(BuildingConstants.TYPE_TRAINNING_FEILD)) {
+				logMessage("Rally Spots filled");
 				return false;
 			}
 			
@@ -6437,8 +6444,9 @@ package scripts.jobQueue.script
     			} else {
     				obj.col3 = "Att " + hero.power;
     			}
+
     			obj.label = hero.name + " " + hero.management + "/" + hero.power + "/" + hero.stratagem +
-    				"\nlevel " + hero.level + "\nloyalty " + hero.loyalty + "\nexperience " + hero.experience;
+    				"\nlevel " + hero.level + "\nloyalty " + hero.loyalty + "\nexperience " + hero.experience + "/" + hero.upgradeExp ;
     			if (hero.itemId != null && hero.status == HeroConstants.HERO_SEIZED_STATU) {
     				obj.label += "\nPersuade with: " + hero.itemAmount + " " + Items.getItemName(hero.itemId);
     			}
