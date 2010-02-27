@@ -3599,7 +3599,7 @@ package scripts.jobQueue.script
 
 		private function handleSearchNPCs() : void {
 			if (localNPCs != null && localNPC10s != null) return;
-			var r:int = 15;
+			var r:int = 20;
 			var cx:int = Map.getX(castle.fieldId);
 			var cy:int = Map.getY(castle.fieldId);
 			
@@ -3706,7 +3706,7 @@ package scripts.jobQueue.script
 					var fieldId:int = Map.getFieldId(x, y);
 					var fieldType:int = Map.getType(fieldId);
 					var fieldLevel:int = Map.getLevel(fieldId);
-						if (fieldLevel == flatLevel && fieldType == FieldConstants.TYPE_FLAT && Map.fieldDistance(fieldId, castle.fieldId) <= 10) {
+						if (fieldLevel == flatLevel && fieldType == FieldConstants.TYPE_FLAT && Map.fieldDistance(fieldId, castle.fieldId) <= 20) {
 							candidateFlatFields.push(fieldId);
 						} else if (fieldLevel >= minLevel && fieldLevel <= maxLevel && fieldType <= FieldConstants.TYPE_FLAT) {
 							candidateLocalFields.push(fieldId);
