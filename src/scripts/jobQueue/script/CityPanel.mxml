@@ -294,10 +294,10 @@
 						showHeaders="true" sortableColumns="false" visible="true" allowDragSelection="false" draggableColumns="false" enabled="true" 
 						selectable="false" horizontalScrollPolicy="off" variableRowHeight="true" minHeight="30" rowHeight="16">
 						<local:columns>
-							<mx:DataGridColumn headerText="Resource" dataField="col1" width="0.25"/>
-							<mx:DataGridColumn headerText="Amount" dataField="col2" width="0.25"/>
+							<mx:DataGridColumn headerText="Resource" dataField="col1" width="0.25" showDataTips="true"/>
+							<mx:DataGridColumn headerText="Amount" dataField="col2" width="0.25" showDataTips="true"/>
 							<mx:DataGridColumn headerText="Rate" dataField="col3" width="0.25" showDataTips="true"/>
-							<mx:DataGridColumn headerText="Days left" dataField="col4" width="0.35"/>
+							<mx:DataGridColumn headerText="Days left" dataField="col4" width="0.35" showDataTips="true"/>
 						</local:columns>
 					</local:RowColorDataGrid>
 				</mx:Canvas>
@@ -491,6 +491,28 @@
 							</mx:DataGridColumn>
 						</local:columns>
 					</local:RowColorDataGrid>	
+				</mx:Canvas>
+				<mx:Canvas label="5" width="100%" height="100%" id="npc5">
+					<mx:DataGrid dataProvider="{npc5data}" width="100%" height="100%" allowMultipleSelection="false"
+						doubleClickEnabled="false" dragEnabled="false" editable="false" resizableColumns="true" wordWrap="false" 
+						showHeaders="true" sortableColumns="false" visible="true" allowDragSelection="false" draggableColumns="false" enabled="true" 
+						selectable="false" horizontalScrollPolicy="off" variableRowHeight="true" minHeight="30" rowHeight="16">
+						<mx:columns>
+							<mx:DataGridColumn headerText="Location" dataField="col1" width="0.20"/>
+							<mx:DataGridColumn headerText="Distance" dataField="col2" width="0.20"/>
+						</mx:columns>
+					</mx:DataGrid>	
+				</mx:Canvas>
+				<mx:Canvas label="10" width="100%" height="100%" id="npc10">
+					<mx:DataGrid dataProvider="{npc10data}" width="100%" height="100%" allowMultipleSelection="false"
+						doubleClickEnabled="false" dragEnabled="false" editable="false" resizableColumns="true" wordWrap="false" 
+						showHeaders="true" sortableColumns="false" visible="true" allowDragSelection="false" draggableColumns="false" enabled="true" 
+						selectable="false" horizontalScrollPolicy="off" variableRowHeight="true" minHeight="30" rowHeight="16">
+						<mx:columns>
+							<mx:DataGridColumn headerText="Location" dataField="col1" width="0.20"/>
+							<mx:DataGridColumn headerText="Distance" dataField="col2" width="0.20"/>
+						</mx:columns>
+					</mx:DataGrid>	
 				</mx:Canvas>
 				<mx:Canvas label="5" width="100%" height="100%" id="npc5">
 					<mx:DataGrid dataProvider="{npc5data}" width="100%" height="100%" allowMultipleSelection="false"

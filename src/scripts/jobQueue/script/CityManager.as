@@ -3706,7 +3706,7 @@ package scripts.jobQueue.script
 					var fieldId:int = Map.getFieldId(x, y);
 					var fieldType:int = Map.getType(fieldId);
 					var fieldLevel:int = Map.getLevel(fieldId);
-						if (fieldLevel == flatLevel && fieldType == FieldConstants.TYPE_FLAT && Map.fieldDistance(fieldId, castle.fieldId) <= 10) {
+						if (fieldLevel == flatLevel && fieldType == FieldConstants.TYPE_FLAT && Map.fieldDistance(fieldId, castle.fieldId) <= 20) {
 							candidateFlatFields.push(fieldId);
 						} else if (fieldLevel >= minLevel && fieldLevel <= maxLevel && fieldType <= FieldConstants.TYPE_FLAT) {
 							candidateLocalFields.push(fieldId);
