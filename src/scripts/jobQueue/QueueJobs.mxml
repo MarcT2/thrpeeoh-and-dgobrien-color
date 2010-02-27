@@ -92,13 +92,13 @@
 
 				citiesTab.addEventListener(ItemClickEvent.ITEM_CLICK, ontab_changed);
 				
-				allLogLabel.addEventListener(MouseEvent.CLICK, onLogClick);
-				allLogLabel.addEventListener(MouseEvent.ROLL_OVER, label_rollOver);
-				allLogLabel.addEventListener(MouseEvent.ROLL_OUT, label_rollOut);
+//				allLogLabel.addEventListener(MouseEvent.CLICK, onLogClick);
+//				allLogLabel.addEventListener(MouseEvent.ROLL_OVER, label_rollOver);
+//				allLogLabel.addEventListener(MouseEvent.ROLL_OUT, label_rollOut);
 				
-				citylogLabel.addEventListener(MouseEvent.CLICK, onCityLogClick);
-				citylogLabel.addEventListener(MouseEvent.ROLL_OVER, label_rollOver);
-				citylogLabel.addEventListener(MouseEvent.ROLL_OUT, label_rollOut);
+//				citylogLabel.addEventListener(MouseEvent.CLICK, onCityLogClick);
+//				citylogLabel.addEventListener(MouseEvent.ROLL_OVER, label_rollOver);
+//				citylogLabel.addEventListener(MouseEvent.ROLL_OUT, label_rollOut);
 				
 				activateLabel(allianceChatLabel);
 				chatText.addEventListener(KeyboardEvent.KEY_UP, keySendChat);
@@ -545,19 +545,19 @@
 	        	e.currentTarget.setStyle("textDecoration", "underline");
 	        }
 	        
-			public function onLogClick(e:Event):void
-			{
-				logStack.selectedChild=logCanv;
-				e.currentTarget.setStyle("fontSize", "12");
-				citylogLabel.setStyle("fontSize", "10");
-			}
+//			public function onLogClick(e:Event):void
+//			{
+//				logStack.selectedChild=logCanv;
+//				e.currentTarget.setStyle("fontSize", "12");
+//				citylogLabel.setStyle("fontSize", "10");
+//			}
 			
-			public function onCityLogClick(e:Event):void
-			{
-				logStack.selectedChild=cLogCanv;
-				e.currentTarget.setStyle("fontSize", "12");
-				allLogLabel.setStyle("fontSize", "10");
-			}
+//			public function onCityLogClick(e:Event):void
+//			{
+//				logStack.selectedChild=cLogCanv;
+//				e.currentTarget.setStyle("fontSize", "12");
+//				allLogLabel.setStyle("fontSize", "10");
+//			}
 	        private function keySendChat(e:KeyboardEvent) : void
 	        {
 	        	if (e.keyCode == Keyboard.ENTER)
@@ -1061,28 +1061,20 @@
 		<mx:Button id="refreshButton" label="Refresh" enabled="true" click="refresh()" fontSize="10"/>
 	</mx:HBox>
 	
-	<mx:VDividedBox width="100%" height="100%">
+	<mx:VDividedBox width="100%" height="100%" verticalGap="5">
 	<mx:ViewStack id="citiesViewStack" width="100%" height="50%" ></mx:ViewStack>
-		<mx:HDividedBox width="100%" id="logChatBox" horizontalGap="3" height="50%" borderStyle="solid" borderThickness="0" verticalAlign="bottom">
+		<mx:HDividedBox width="100%" id="logChatBox" horizontalGap="5" height="50%" borderStyle="solid" borderThickness="0" verticalAlign="bottom">
 			<mx:VBox width="50%" height="100%" verticalGap="0" borderStyle="none" id="vlogs">
-				<mx:HBox width="100%" height="24">
-					<mx:VBox width="5%" verticalGap="0" borderStyle="none">
-						<mx:Label text="Logs" id="allLogLabel" fontSize="12"/>
-					</mx:VBox>
-						<mx:VBox width="10%" verticalGap="0" borderStyle="none">
-						<mx:Label text="City log" id="citylogLabel"/>
-					</mx:VBox>
-						<mx:VBox width="80%" verticalGap="0" borderStyle="none">
-					</mx:VBox>
-					<mx:VBox width="5%" verticalGap="0" borderStyle="none">
-						<mx:Button label="Clear" height="20" click="clearLogs()" id="clrButton" styleName="gradientRectangleSkin"/>
-					</mx:VBox>
-				</mx:HBox>
+				<mx:HBox width="100%" height="20" verticalAlign="bottom">
+				<mx:TabBar dataProvider="logStack" height="20"/>
+				<mx:HBox width="90%" height="100%"></mx:HBox>
+				<mx:Button label="Clear" height="20" click="clearLogs()" id="clrButton" styleName="gradientRectangleSkin"/>
+			</mx:HBox>
 				<mx:ViewStack id="logStack" width="100%" height="100%" creationPolicy="all">
-					<mx:Canvas id="logCanv" width="100%" height="100%" label="Log">
+					<mx:Canvas id="allLogLabel" width="100%" height="100%" label="Log">
 						<mx:TextArea width="100%" id="logs" height="100%" wordWrap="true" editable="false" enabled="true"/>
 					</mx:Canvas>
-					<mx:Canvas id="cLogCanv" width="100%" height="100%" label="City log">
+					<mx:Canvas id="citylogLabel" width="100%" height="100%" label="City log">
 						<mx:ViewStack id="citiesLogViewStack" width="100%" height="100%" ></mx:ViewStack>
 					</mx:Canvas>
 				</mx:ViewStack>
