@@ -1066,9 +1066,17 @@
 		<mx:HDividedBox width="100%" id="logChatBox" horizontalGap="3" height="50%" borderStyle="solid" borderThickness="0" verticalAlign="bottom">
 			<mx:VBox width="50%" height="100%" verticalGap="0" borderStyle="none" id="vlogs">
 				<mx:HBox width="100%" height="24">
-					<mx:Label text="Logs" width="5%" id="allLogLabel" fontSize="12"/>
-					<mx:Label text="City log" width="85%" id="citylogLabel"/>
-					<mx:Button label="Clear" height="20" click="clearLogs()" id="clrButton" styleName="gradientRectangleSkin"/>
+					<mx:VBox width="5%" verticalGap="0" borderStyle="none">
+						<mx:Label text="Logs" id="allLogLabel" fontSize="12"/>
+					</mx:VBox>
+						<mx:VBox width="10%" verticalGap="0" borderStyle="none">
+						<mx:Label text="City log" id="citylogLabel"/>
+					</mx:VBox>
+						<mx:VBox width="80%" verticalGap="0" borderStyle="none">
+					</mx:VBox>
+					<mx:VBox width="5%" verticalGap="0" borderStyle="none">
+						<mx:Button label="Clear" height="20" click="clearLogs()" id="clrButton" styleName="gradientRectangleSkin"/>
+					</mx:VBox>
 				</mx:HBox>
 				<mx:ViewStack id="logStack" width="100%" height="100%" creationPolicy="all">
 					<mx:Canvas id="logCanv" width="100%" height="100%" label="Log">
