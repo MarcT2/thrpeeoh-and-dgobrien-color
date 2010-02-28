@@ -737,8 +737,9 @@ package scripts.jobQueue.script
 				
 				if (!Connection.getInstance().authenticated) return;
 	
+				// critical matters
 				handleEnemyArmies();
-				doHealingTroops();				
+				doHealingTroops();
 				if (getConfig(CONFIG_ABANDON) <= 0) {
 					handleEmergencyComfort();
 				}
@@ -747,11 +748,13 @@ package scripts.jobQueue.script
 	
 				handleLoyaltyAttack();
 				handleSpamAttack();
-				if (isMainTown()) handleAllianceReports();
-				if (isMainTown()) displayMailNotification();
 
-			
-				if (lastNewReport != null) handleServerNewReport(lastNewReport);
+				// player matter, this should be best moved else where
+				if (isMainTown()) {
+					handleAllianceReports();
+					displayMailNotification();
+					if (lastNewReport != null) handleServerNewReport(lastNewReport);
+				}
 				
 				if (researches == null && playerTimingAllowed("research", 6)) {
 					ActionFactory.getInstance().getTechCommand().getResearchList(castle.id, handleQuickResearchListResponse);
@@ -1520,6 +1523,7 @@ package scripts.jobQueue.script
 
 			// delay further if the price swing is large
 			if (!needResourceNow && newPrice > trade.price * 1.1 && !cityTimingAllowed("priceswing", 900)) return;
+			if (!cityTimingAllowed("modify", 30)) return;
 
 			logMessage("Modify buy " + resourceNames[trade.resType] + " from " + remain + "@" + trade.price + " to " + newAmount + "@" + newPrice + ", range: " + sellPrice(trade.resType) + "-" + buyPrice(trade.resType));
 			ActionFactory.getInstance().getTradeCommands().cancelTrade(castle.id, trade.id);
@@ -1552,6 +1556,7 @@ package scripts.jobQueue.script
 			// is there enough money to cover the modification
 			if (estResource.gold < 0.005 * newPrice * (remain + amount)) return;
 			if (!needGoldNow && newPrice < trade.price * 0.8 && !cityTimingAllowed("priceswing", 900)) return;
+			if (!cityTimingAllowed("modify", 30)) return;
 			
 			logMessage("Modify sell " + resourceNames[trade.resType] + " from " + remain + "@" + trade.price + " to " + (remain+amount) + "@" + newPrice + ", range: " + sellPrice(trade.resType) + "-" + buyPrice(trade.resType));
 			ActionFactory.getInstance().getTradeCommands().cancelTrade(castle.id, trade.id);
@@ -1807,14 +1812,14 @@ package scripts.jobQueue.script
 				if (estResource.gold < 500000000 && nResource[res] > Math.min(desired * 1.2, desired + 1000000)) { // sale
 					var sellAmount:Number = Math.min(estResource.gold/sellPrice(res)*100, (nSellResource[res]-desired)*1.2, nCurrResource[res]*.9, sellAmount(res));
 					sellAmount = int(sellAmount / 100) * 100;
-					if (sellAmount < 0) continue;
+					if (sellAmount <= Math.max(0, nResource[res] / 10)) continue;
 					if (sellAmount > batchSize) sellAmount = batchSize;
 					doSell(sellAmount, res, desperate);
 					return;
 				} else if (nResource[res] < resourceLimits[res] && desired > Math.min(nResource[res] * 1.2, nResource[res] + 1000000) && estResource.gold > 1000) { // buy
 					var buyAmount:Number = Math.min((estResource.gold-goldDesired-reserved.gold)/buyPrice(res)*0.99, (desired-nResource[res])*1.2, buyAmount(res));
 					buyAmount = int(buyAmount / 100) * 100;
-					if (buyAmount <= 0) continue;
+					if (buyAmount <= Math.max(0, nResource[res] / 10)) continue;
 					if (buyAmount > batchSize) buyAmount = batchSize;
 					doBuy(buyAmount, res, desperate);
 					return;
@@ -1981,9 +1986,10 @@ package scripts.jobQueue.script
 						any = true;
 					}
 				}
+				
+				// 1 hero at a time
+				if (any) return true;
 			}
-			
-			if (any) return true;
 		
 			for each(hero in heroes) {
 				if (hero.status != CityStateConstants.HERO_STATUS_IDLE && hero.status != CityStateConstants.HERO_STATUS_MAYOR) continue;
@@ -2003,10 +2009,10 @@ package scripts.jobQueue.script
 						any = true;
 					}
 				}
+				
+				// 1 hero at a time
+				if (any) return true;
 			}
-			
-			if (any) return true;
-			
 			
 			return false;
 		}
