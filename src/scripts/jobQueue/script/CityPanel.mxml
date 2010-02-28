@@ -39,7 +39,7 @@
 	        	
 				this.id = "Castle" + city.castle.id;
 	        	var sName:String = city.castle.name;
-	        	if (sName.length > 5) sName = sName.substring(0, 5);
+	        	if (sName.length > 3) sName = sName.substring(0, 3);
 	        	this.label = sName + "(" + Map.getX(city.castle.fieldId) + "," + Map.getY(city.castle.fieldId) + ")";
 
 	        	script.addEventListener(ScriptLogEvent.TYPE, queueJobs.onLog);
@@ -431,7 +431,8 @@
 							<mx:DataGridColumn headerText="Total" dataField="col3" width="0.15"/>
 							<mx:DataGridColumn headerText="In Queues" dataField="col4" width="0.15"/>
 							<mx:DataGridColumn headerText="Goal" dataField="col5" width="0.15"/>
-							<mx:DataGridColumn headerText="Reinforce" dataField="col6" width="0.15"/>
+							<mx:DataGridColumn headerText="Remain" dataField="col6" width="0.15"/>
+							<mx:DataGridColumn headerText="Reinforce" dataField="col7" width="0.15"/>
 						</local:columns>
 					</local:RowColorDataGrid>	
 				</mx:Canvas>
