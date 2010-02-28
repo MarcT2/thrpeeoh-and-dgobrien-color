@@ -2572,7 +2572,15 @@ package scripts.jobQueue.script
 		
 		private function formatNum(num:Number) : String {
 			if (num < 0) return "-" + formatNum(-num);
-			
+			if (num < 1000) return "" + num;
+			if (num < 10000) return "" + int(num/100) / 10 + "k";
+			if (num < 1000000) return "" + int(num/1000) + "k";
+			if (num < 10000000) return "" + int(num/100000) / 10 + "m";
+			return "" + int(num/1000000) + "m";
+		}
+		
+		private function formatTroopNum(num:Number) : String {
+			if (num < 0) return "0";
 			if (num < 1000) return "" + num;
 			if (num < 10000) return "" + int(num/100) / 10 + "k";
 			if (num < 1000000) return "" + int(num/1000) + "k";
@@ -6732,12 +6740,24 @@ package scripts.jobQueue.script
 				obj.col3 = formatNum(total[ troopIntNames[type] ]);
 				obj.col4 = formatNum(prod[ troopIntNames[type] ]);	
 				if (troopRequirement != null) {
-					obj.col5 = formatNum(troopRequirement[ troopIntNames[type] ]);
-					if (total[ troopIntNames[type] ] + prod[ troopIntNames[type] ] < troopRequirement[ troopIntNames[type] ]) obj.bgColor = 0xCCCCFF;
+					obj.col5 = formatTroopNum(troopRequirement[ troopIntNames[type] ]);
+					obj.col6 = formatTroopNum(troopRequirement[ troopIntNames[type] ] - (total[ troopIntNames[type] ] + prod[ troopIntNames[type] ])); 
 				} else {
 					obj.col5 = "";
+					obj.col6 = "";
 				}
-				obj.col6 = formatNum(friendly[ troopIntNames[type] ]);
+				if ( obj.col6 > 0 ) {
+					obj.bgColor = 0xFFDDDD;
+				} else {
+					obj.bgColor = 0xDDFFDD;
+				}
+				if ( obj.col6 == "0" && obj.col4 == "0" ) { 
+					obj.bgColor = 0xDDFFDD;
+				} else if ( obj.col4 > 0 ) {
+					obj.bgColor = 0xFFFFDD;
+				}
+ 
+				obj.col7 = formatTroopNum(friendly[ troopIntNames[type] ]);
 				data.addItem(obj);
 			}   	
    		}    
